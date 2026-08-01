@@ -9,7 +9,6 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
-import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -18,14 +17,10 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.EditText;
 
-import com.google.appinventor.components.annotations.DesignerComponent;
 import com.google.appinventor.components.annotations.DesignerProperty;
-import com.google.appinventor.components.annotations.PropertyCategory;
 import com.google.appinventor.components.annotations.SimpleEvent;
 import com.google.appinventor.components.annotations.SimpleFunction;
-import com.google.appinventor.components.annotations.SimpleObject;
 import com.google.appinventor.components.annotations.SimpleProperty;
-import com.google.appinventor.components.common.ComponentCategory;
 import com.google.appinventor.components.runtime.AndroidViewComponent;
 import com.google.appinventor.components.runtime.ComponentContainer;
 import com.google.appinventor.components.runtime.EventDispatcher;
@@ -36,13 +31,6 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.HashSet;
 
-@DesignerComponent(
-    version = 1,
-    description = "CodeIgniteMITMusic builds a polished two-screen music-player GUI for MIT App Inventor. It exposes UI blocks and events only; students implement playback, storage, playlists, permissions, and sharing logic.",
-    category = ComponentCategory.EXTENSION,
-    nonVisible = false,
-    iconName = "icon.png")
-@SimpleObject(external = true)
 public class CodeIgniteMITMusic extends AndroidViewComponent {
     private final ComponentContainer container;
     private final FrameLayout root;
