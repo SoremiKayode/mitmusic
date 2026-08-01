@@ -43,7 +43,7 @@ import java.util.HashSet;
     nonVisible = false,
     iconName = "icon.png")
 @SimpleObject(external = true)
-public class ChatInputBox extends AndroidViewComponent {
+public class CodeIgniteMITMusic extends AndroidViewComponent {
     private final ComponentContainer container;
     private final FrameLayout root;
     private final LinearLayout shell;
@@ -85,7 +85,7 @@ public class ChatInputBox extends AndroidViewComponent {
     private String currentScreen = "Library";
     private String sharePath = "";
 
-    public ChatInputBox(ComponentContainer container) {
+    public CodeIgniteMITMusic(ComponentContainer container) {
         super(container);
         this.container = container;
         root = new FrameLayout(container.$context());
