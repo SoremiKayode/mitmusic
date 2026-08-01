@@ -2,7 +2,7 @@
 
 CodeIgniteMITMusic is a professional MIT App Inventor extension template that automatically builds a polished, two-screen music-player interface inspired by modern commercial players.
 
-The extension intentionally does **not** implement playback, playlist persistence, storage scanning, permissions, or sharing backends. It supplies a complete GUI and exposes blocks/events so students can implement the business logic themselves.
+The extension now includes in-memory playlist, favorites, queue, and recently-played behavior plus MediaStore-based music scanning blocks. Playback and platform sharing are still exposed as events so apps can connect them to their preferred player/share logic.
 
 ## Included UI
 
@@ -27,4 +27,4 @@ The extension intentionally does **not** implement playback, playlist persistenc
 ]
 ```
 
-All interaction blocks dispatch events for App Inventor students to handle in blocks.
+Use `RequestAudioPermission` or `RequestStoragePermission`, then call `LoadAllMusic` to scan the device MediaStore for readable audio files and populate the library. Interaction blocks continue to dispatch events for App Inventor students to handle in blocks.
