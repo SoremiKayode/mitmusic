@@ -206,7 +206,7 @@ public class CodeIgniteMITMusic extends AndroidViewComponent {
     private String titleFromPath(String path){ int slash=path.lastIndexOf('/'); String name=slash>=0?path.substring(slash+1):path; int dot=name.lastIndexOf('.'); return dot>0?name.substring(0,dot):name; }
     private String nonEmpty(String value,String fallback){ return value!=null&&value.length()>0?value:fallback; }
     private String formatDuration(long ms){ long total=ms/1000; return (total/60)+":"+(total%60<10?"0":"")+(total%60); }
-    private String requiredAudioPermission(){ return Build.VERSION.SDK_INT>=33?Manifest.permission.READ_MEDIA_AUDIO:Manifest.permission.READ_EXTERNAL_STORAGE; }
+    private String requiredAudioPermission(){ return Build.VERSION.SDK_INT>=33?"android.permission.READ_MEDIA_AUDIO":Manifest.permission.READ_EXTERNAL_STORAGE; }
     private void requestPermission(final String permission){ if(CheckPermission(permission)){ PermissionGranted(permission); return; } container.$form().askPermission(permission,new PermissionResultHandler(){ public void HandlePermissionResponse(String p,boolean granted){ if(granted)PermissionGranted(p); else PermissionDenied(p); }}); }
 
     private TextView label(String t,int sp,boolean bold){ TextView v=new TextView(container.$context()); v.setText(t); v.setTextSize(sp); v.setTextColor(textColor); if(bold)v.setTypeface(Typeface.DEFAULT_BOLD); return v; }
