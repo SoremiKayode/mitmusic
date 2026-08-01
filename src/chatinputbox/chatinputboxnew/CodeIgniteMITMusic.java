@@ -42,18 +42,18 @@ public class CodeIgniteMITMusic extends AndroidViewComponent {
     private final FrameLayout contentFrame;
     private final LinearLayout libraryScreen;
     private final LinearLayout nowPlayingScreen;
-    private final LinearLayout songList;
-    private final LinearLayout dropdownList;
+    private LinearLayout songList;
+    private LinearLayout dropdownList;
     private final LinearLayout playlistDrawer;
     private final LinearLayout sidebarDrawer;
-    private final TextView emptyStateText;
+    private TextView emptyStateText;
     private final ImageButton fab;
-    private final ImageView albumArt;
-    private final TextView nowTitle;
-    private final TextView nowArtist;
-    private final SeekBar seekBar;
-    private final TextView currentTime;
-    private final TextView durationTime;
+    private ImageView albumArt;
+    private TextView nowTitle;
+    private TextView nowArtist;
+    private SeekBar seekBar;
+    private TextView currentTime;
+    private TextView durationTime;
     private final LinearLayout bottomNav;
 
     private final ArrayList<Song> songs = new ArrayList<Song>();
