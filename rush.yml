@@ -1,6 +1,5 @@
----
-name: ChatInputBox
-description: ChatGPT-style prompt input box with send and audio buttons.
+name: CodeIgniteMITMusic
+description: Professional MIT App Inventor music-player GUI template extension with UI blocks and events only.
 
 version:
   number: auto
