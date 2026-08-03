@@ -15,7 +15,6 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -55,7 +54,7 @@ public class CodeIgniteMITMusic extends AndroidViewComponent {
     private final LinearLayout playlistDrawer;
     private final LinearLayout sidebarDrawer;
     private TextView emptyStateText;
-    private final ImageButton fab;
+    private final TextView fab;
     private ImageView albumArt;
     private TextView nowTitle;
     private TextView nowArtist;
@@ -126,8 +125,9 @@ public class CodeIgniteMITMusic extends AndroidViewComponent {
         bottomNav.addView(nav("Library"));
         bottomNav.addView(nav("Now Playing"));
 
-        fab = new ImageButton(container.$context());
-        fab.setImageDrawable(null); fab.setContentDescription("Update music database");
+        fab = label("↻", 28, true);
+        fab.setGravity(Gravity.CENTER);
+        fab.setContentDescription("Update music database");
         fab.setOnClickListener(new View.OnClickListener(){ public void onClick(View v){ FABClicked(); LoadAllMusic(); }});
         FrameLayout.LayoutParams fabLp = new FrameLayout.LayoutParams(dp(64), dp(64), Gravity.BOTTOM | Gravity.RIGHT);
         fabLp.setMargins(0,0,dp(18),dp(78));
@@ -210,7 +210,7 @@ public class CodeIgniteMITMusic extends AndroidViewComponent {
     private void requestPermission(final String permission){ if(CheckPermission(permission)){ PermissionGranted(permission); return; } container.$form().askPermission(permission,new PermissionResultHandler(){ public void HandlePermissionResponse(String p,boolean granted){ if(granted)PermissionGranted(p); else PermissionDenied(p); }}); }
 
     private TextView label(String t,int sp,boolean bold){ TextView v=new TextView(container.$context()); v.setText(t); v.setTextSize(sp); v.setTextColor(textColor); if(bold)v.setTypeface(Typeface.DEFAULT_BOLD); return v; }
-    private ImageButton icon(String t, View.OnClickListener l){ ImageButton b=new ImageButton(container.$context()); b.setBackground(round(Color.TRANSPARENT,24)); b.setContentDescription(t); b.setOnClickListener(l); return b; }
+    private TextView icon(String t, View.OnClickListener l){ TextView b=label(t,22,true); b.setGravity(Gravity.CENTER); b.setMinWidth(dp(44)); b.setMinHeight(dp(44)); b.setPadding(dp(8),dp(6),dp(8),dp(6)); b.setBackground(round(Color.TRANSPARENT,24)); b.setContentDescription(t); b.setOnClickListener(l); return b; }
     private TextView nav(final String t){ TextView v=label(t,14,true); v.setGravity(Gravity.CENTER); v.setOnClickListener(new View.OnClickListener(){ public void onClick(View view){ NavigateTo(t); }}); v.setLayoutParams(new LinearLayout.LayoutParams(0,-1,1)); return v; }
     private LinearLayout drawer(String title,String[] items){ LinearLayout d=new LinearLayout(container.$context()); d.setOrientation(LinearLayout.VERTICAL); d.setPadding(dp(16),dp(18),dp(16),dp(18)); d.setBackground(round(cardColor,0)); d.addView(label(title,20,true)); for(final String item:items){ TextView row=label(item,15,false); row.setPadding(0,dp(14),0,dp(14)); row.setOnClickListener(new View.OnClickListener(){ public void onClick(View v){ SidebarItemClicked(item); }}); d.addView(row); } return d; }
     private FrameLayout.LayoutParams drawerParams(int gravity){ FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(dp(280),-1,gravity); return lp; }
