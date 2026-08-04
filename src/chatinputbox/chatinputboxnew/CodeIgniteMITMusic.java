@@ -179,7 +179,33 @@ public class CodeIgniteMITMusic extends AndroidViewComponent {
     @SimpleFunction public void OpenLibraryScreen(){ NavigateTo("Library"); } @SimpleFunction public void OpenNowPlayingScreen(){ NavigateTo("NowPlaying"); } @SimpleFunction public void NavigateTo(String screen){ currentScreen=screen; boolean now=screen.toLowerCase().contains("now"); libraryScreen.setVisibility(now?View.GONE:View.VISIBLE); nowPlayingScreen.setVisibility(now?View.VISIBLE:View.GONE); ScreenChanged(screen); } @SimpleFunction public void GoBack(){ OpenLibraryScreen(); }
 
     @SimpleFunction public void SetAlbumArt(String path){ Drawable d=loadDrawable(path); if(d==null&&defaultAlbumArtPath.length()>0)d=loadDrawable(defaultAlbumArtPath); if(d!=null)albumArt.setImageDrawable(d); } @SimpleFunction public void SetSongTitle(String title){ nowTitle.setText(title); } @SimpleFunction public void SetArtist(String artist){ nowArtist.setText(artist); } @SimpleFunction public void SetBackground(int c){ backgroundColor=c; applyTheme(); } @SimpleFunction public void SetAccentColor(int c){ accentColor=c; applyTheme(); } @SimpleFunction public void SetButtonColor(int c){ buttonColor=c; applyTheme(); }
-    @SimpleFunction public void SetCurrentPosition(int p){ seekBar.setProgress(p); } @SimpleFunction public void SetDuration(int d){ seekBar.setMax(d); } @SimpleFunction public void UpdateSeekbar(int p,int d){ seekBar.setMax(d); seekBar.setProgress(p); } @SimpleFunction public void SetCurrentTime(String t){ currentTime.setText(t); } @SimpleFunction public void SetDurationTime(String t){ durationTime.setText(t); }
+
+    @SimpleFunction(description="Sets the current position of the now-playing seek bar.")
+    public void SetCurrentPosition(int position){
+        seekBar.setProgress(position);
+    }
+
+    @SimpleFunction(description="Sets the maximum duration value of the now-playing seek bar.")
+    public void SetDuration(int duration){
+        seekBar.setMax(duration);
+    }
+
+    @SimpleFunction(description="Updates both the current position and maximum duration of the now-playing seek bar.")
+    public void UpdateSeekbar(int position,int duration){
+        seekBar.setMax(duration);
+        seekBar.setProgress(position);
+    }
+
+    @SimpleFunction(description="Sets the current time text shown beside the now-playing seek bar.")
+    public void SetCurrentTime(String text){
+        currentTime.setText(text);
+    }
+
+    @SimpleFunction(description="Sets the duration time text shown beside the now-playing seek bar.")
+    public void SetDurationTime(String text){
+        durationTime.setText(text);
+    }
+
     @SimpleFunction public int GetMusicCount(){ return songs.size(); } @SimpleFunction public String GetMusicAtIndex(int i){ return i>0&&i<=songs.size()?songs.get(i-1).toJson().toString():""; } @SimpleFunction public String GetAlbumArt(int i){ return get(i).albumArt; } @SimpleFunction public String GetArtist(int i){ return get(i).artist; } @SimpleFunction public String GetTitle(int i){ return get(i).title; } @SimpleFunction public String GetDuration(int i){ return get(i).duration; } @SimpleFunction public String GetAlbum(int i){ return get(i).album; } @SimpleFunction public String GetPath(int i){ return get(i).path; }
 
     @SimpleFunction public void DarkTheme(){ darkTheme=true; primaryColor=Color.rgb(18,18,18); backgroundColor=Color.rgb(12,12,12); cardColor=Color.rgb(32,32,32); textColor=Color.WHITE; applyTheme(); } @SimpleFunction public void LightTheme(){ darkTheme=false; primaryColor=Color.WHITE; backgroundColor=Color.rgb(246,246,246); cardColor=Color.WHITE; textColor=Color.rgb(25,25,25); applyTheme(); } @SimpleFunction public void SetPrimaryColor(int c){ primaryColor=c; applyTheme(); } @SimpleFunction public void SetBackgroundColor(int c){ backgroundColor=c; applyTheme(); } @SimpleFunction public void SetCardColor(int c){ cardColor=c; applyTheme(); } @SimpleFunction public void SetTextColor(int c){ textColor=c; applyTheme(); }
