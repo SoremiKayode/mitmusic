@@ -175,7 +175,7 @@ A simple complete app flow is:
 - The extension builds the music-player interface and dispatches events. It intentionally does not own audio playback.
 - Device music scanning depends on Android storage/audio permission and the files indexed by Android MediaStore.
 - In-memory lists are reset when the app process restarts unless your app saves them externally.
-- Several icon/image setter blocks are placeholders for app-level customization flows and do not load image assets directly yet.
+- Icon setter blocks now load image assets from packaged app assets or absolute file paths. Music scanned from MediaStore is returned as a content URI so App Inventor Player blocks can open it more reliably on modern Android versions.
 
 ## Detailed block reference
 
@@ -316,7 +316,7 @@ These blocks keep data in memory only. Save important lists in TinyDB if you nee
 | `TextColor` property | color number | Changes the extension text color. |
 | `Radius` property | number | Changes the search bar corner radius in density-independent pixels. |
 
-The icon/image setter blocks such as `SetPlayIcon(path)`, `SetPauseIcon(path)`, `SetNextIcon(path)`, `SetPreviousIcon(path)`, `SetShuffleIcon(path)`, `SetRepeatIcon(path)`, `SetFavoriteIcon(path)`, `SetPlaylistIcon(path)`, `SetSearchIcon(path)`, `SetSidebarIcon(path)`, `SetAlbumPlaceholder(path)`, `SetShareIcon(path)`, `SetSearchIconImage(path)`, `SetClearIcon(path)`, `SetShareButtonImage(path)`, `SetPlayButton(path)`, `SetPauseButton(path)`, `SetPreviousButton(path)`, `SetNextButton(path)`, `SetShuffleButton(path)`, `SetRepeatButton(path)`, `SetFavoriteButton(path)`, `SetQueueButton(path)`, `SetShareButton(path)`, `SetDefaultAlbumArt(path)`, `LoadAlbumArt(path)`, `SetFABIcon(path)`, and `SetEmptyStateImage(path)` are currently compatibility placeholders. Pass a text asset path if your app keeps these blocks for future versions, but this version does not load image assets from those paths.
+The icon/image setter blocks such as `SetPlayIcon(path)`, `SetPauseIcon(path)`, `SetNextIcon(path)`, `SetPreviousIcon(path)`, `SetShuffleIcon(path)`, `SetRepeatIcon(path)`, `SetFavoriteIcon(path)`, `SetPlaylistIcon(path)`, `SetSearchIcon(path)`, `SetSidebarIcon(path)`, `SetShareIcon(path)`, `SetSearchIconImage(path)`, `SetShareButtonImage(path)`, `SetPlayButton(path)`, `SetPauseButton(path)`, `SetPreviousButton(path)`, `SetNextButton(path)`, `SetShuffleButton(path)`, `SetRepeatButton(path)`, `SetFavoriteButton(path)`, `SetQueueButton(path)`, `SetShareButton(path)`, and `SetFABIcon(path)` now replace matching built-in symbols with the image found at the supplied packaged asset name or absolute file path. `SetAlbumPlaceholder(path)`, `SetDefaultAlbumArt(path)`, and `LoadAlbumArt(path)` update the Now Playing album-art image. If an image cannot be loaded, the UI falls back to the default text symbol.
 
 ### Event blocks
 
