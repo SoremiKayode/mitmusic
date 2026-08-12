@@ -103,6 +103,44 @@ Update the Now Playing progress with:
 - `SetCurrentTime(text)`
 - `SetDurationTime(text)`
 
+Important MIT App Inventor Player note: the built-in Player component does not expose reliable `CurrentPosition` and `Duration` getter blocks in all App Inventor distributions. If your Player drawer does not contain those blocks, do not use `Player1.CurrentPosition` or `Player1.Duration`. Instead, keep your own progress variables with a Clock:
+
+1. Create global variables:
+   - `currentPositionMs` = `0`
+   - `durationMs` = `0`
+   - `isPlaying` = `false`
+2. When `MusicClicked` fires, use the `duration` text supplied by the extension, convert it to milliseconds with the `durationTextToMillis` procedure below, set `currentPositionMs` to `0`, start `Player1`, set `isPlaying` to `true`, and enable the Clock.
+3. On every Clock timer tick, add the Clock interval to `currentPositionMs` while `isPlaying` is true, then call `UpdateSeekbar(currentPositionMs, durationMs)`, `SetCurrentTime(formatMillis(currentPositionMs))`, and `SetDurationTime(formatMillis(durationMs))`.
+4. When `SeekChanged(position)` fires, set `currentPositionMs` to `position`. If your player component has a seek block, seek the player too; if not, only the UI seek bar can be updated.
+5. When pause/stop/completed happens, set `isPlaying` to `false` and disable or stop incrementing the Clock.
+
+Example `formatMillis` procedure for App Inventor blocks:
+
+```text
+to formatMillis(ms)
+    set totalSeconds to floor(ms / 1000)
+    set minutes to floor(totalSeconds / 60)
+    set seconds to totalSeconds mod 60
+
+    if seconds < 10
+        return join minutes ":0" seconds
+    else
+        return join minutes ":" seconds
+```
+
+Example `durationTextToMillis` procedure for the `duration` text received from `MusicClicked`, such as `3:45`:
+
+```text
+to durationTextToMillis(durationText)
+    set parts to split durationText at ":"
+    if length of list parts = 2
+        set minutes to number item 1 of parts
+        set seconds to number item 2 of parts
+        return ((minutes * 60) + seconds) * 1000
+    else
+        return 0
+```
+
 ### 6. Use search
 
 Search is built into the UI and can also be controlled from blocks:
@@ -168,7 +206,7 @@ A simple complete app flow is:
 5. `PauseClicked` → pause your Player.
 6. `PlayClicked` → start or resume your Player.
 7. `NextClicked` / `PreviousClicked` → choose another path from your saved list and play it.
-8. Clock timer while playing → call `UpdateSeekbar`, `SetCurrentTime`, and `SetDurationTime`.
+8. Clock timer while playing → if your player component exposes position/duration getters, call `UpdateSeekbar`, `SetCurrentTime`, and `SetDurationTime` from those values. If you use the built-in Player and those getters are unavailable, update `currentPositionMs` yourself from the Clock interval and use the `formatMillis` procedure above.
 
 ## Notes and limitations
 
@@ -246,19 +284,27 @@ The extension does not play audio directly. These blocks update the UI or raise 
 
 | Block | Parameters | What it does | How to use it |
 | --- | --- | --- | --- |
-| `PlayMusic()` / `ResumeMusic()` | None | Raises `PlayClicked`. | In the event, start or resume your player component. |
-| `PauseMusic()` | None | Raises `PauseClicked`. | In the event, pause your player component. |
-| `StopMusic()` | None | Raises `ControlButtonClicked("Stop")`. | In the generic control event, stop your player. |
-| `NextMusic()` / `PreviousMusic()` | None | Raises next/previous events. | Use your own playlist or queue list to choose the next path. |
-| `ShuffleMusic()` / `RepeatMusic()` | None | Raises shuffle/repeat events. | Toggle your own shuffle/repeat variables. |
-| `SetSongTitle(title)` | `title`: text | Updates the Now Playing title label. | Call from `MusicClicked` with `songName`. |
-| `SetArtist(artist)` | `artist`: text | Updates the Now Playing artist label. | Call from `MusicClicked` with `artist`. |
-| `SetAlbumArt(path)` | `path`: text | Reserved for album-art customization. | Keep your own album-art display logic if needed. |
-| `SetCurrentPosition(position)` | `position`: number | Sets the seek bar progress. | Use a Clock timer while music is playing. |
-| `SetDuration(duration)` | `duration`: number | Sets the seek bar maximum. | Set from your player duration in milliseconds or seconds, consistently with `position`. |
-| `UpdateSeekbar(position, duration)` | `position`: number, `duration`: number | Sets both seek progress and maximum together. | Recommended Clock timer block for progress updates. |
-| `SetCurrentTime(text)` | `text`: display text | Updates the left time label. | Pass formatted text like `1:23`. |
-| `SetDurationTime(text)` | `text`: display text | Updates the right time label. | Pass formatted total duration like `3:45`. |
+| `PlayMusic()` / `ResumeMusic()` | None | Raises the `PlayClicked` event. This block does not start audio by itself. | In `PlayClicked`, call your actual audio player start/resume block and set your `isPlaying` variable to `true`. |
+| `PauseMusic()` | None | Raises the `PauseClicked` event. This block does not pause audio by itself. | In `PauseClicked`, call your actual audio player pause block and set `isPlaying` to `false` so the Clock stops advancing progress. |
+| `StopMusic()` | None | Raises `ControlButtonClicked("Stop")`. | In `ControlButtonClicked`, if `name` is `Stop`, stop your player, set `isPlaying` to `false`, reset `currentPositionMs` to `0`, and call `SetCurrentPosition(0)`. |
+| `NextMusic()` / `PreviousMusic()` | None | Raises the `NextClicked` or `PreviousClicked` event. It does not choose a song automatically. | Keep a `CurrentIndex` variable. For next, add 1 and wrap to 1 after `GetMusicCount`; for previous, subtract 1 and wrap to `GetMusicCount`. Then use `GetPath(CurrentIndex)` as the new player source. |
+| `ShuffleMusic()` / `RepeatMusic()` | None | Raises shuffle/repeat events. The extension does not store shuffle or repeat mode for playback. | Toggle your own Boolean variables, such as `shuffleEnabled` and `repeatEnabled`, and use them in `Player.Completed`, `NextClicked`, and `PreviousClicked`. |
+| `SetSongTitle(title)` | `title`: text. Use the `songName` value from `MusicClicked` or `GetTitle(index)`. | Updates only the Now Playing song title label. It does not change the song file being played. | Call immediately after setting your player source so the Now Playing screen matches the audio. |
+| `SetArtist(artist)` | `artist`: text. Use the `artist` value from `MusicClicked` or `GetArtist(index)`. | Updates only the Now Playing artist label. | Call with `Unknown Artist` or blank text if your song has no artist metadata. |
+| `SetAlbumArt(path)` | `path`: text asset name, `file:///android_asset/...`, or absolute image file path. | Loads the supplied image into the Now Playing album-art view if it can be found. | Package a placeholder image in your app assets and pass its name, such as `album_placeholder.png`; if a song has no art, use `SetDefaultAlbumArt` or `SetAlbumPlaceholder`. |
+| `SetCurrentPosition(position)` | `position`: number. This is the current playback location. Use milliseconds if your duration is also milliseconds. If App Inventor shows this socket as `p`, `p` means `position`. | Sets only the seek bar progress/current thumb position. It does not seek the real audio player. | With the built-in Player, set `position` from your own `currentPositionMs` Clock variable. If your player has a real current-position getter, pass that value instead. |
+| `SetDuration(duration)` | `duration`: number. This is the total song length. Use the same unit as `position`. If App Inventor shows this socket as `d`, `d` means `duration`. | Sets only the seek bar maximum/end value. It does not change the audio file duration. | If your player exposes a duration getter, pass it. Otherwise convert the `duration` text from `MusicClicked`, for example `3:45`, with `durationTextToMillis(duration)`. |
+| `UpdateSeekbar(position, duration)` | `position`: number current playback location; `duration`: number total song length. In some block views these may appear as short names like `p` and `d`; `p` = progress/position and `d` = duration. Both values must use the same unit, preferably milliseconds. | Sets both the seek bar maximum and current progress at the same time. It only updates the extension UI. It does not read from or control `Player1`. | On each Clock tick, call `UpdateSeekbar(currentPositionMs, durationMs)`. If using another player extension with getters, call `UpdateSeekbar(realCurrentPosition, realDuration)`. If the bar jumps or fills instantly, your `position` and `duration` are probably using different units. |
+| `SetCurrentTime(text)` | `text`: formatted display text for the elapsed time, such as `0:07`, `1:23`, or `12:05`. | Updates the left time label next to the seek bar. It expects text, not milliseconds. | Pass `formatMillis(currentPositionMs)`, not the raw number, unless you want the label to show an unformatted number. |
+| `SetDurationTime(text)` | `text`: formatted display text for the total song length, such as `3:45`. | Updates the right time label next to the seek bar. It expects text, not milliseconds. | Pass the original `duration` text from `MusicClicked`, or pass `formatMillis(durationMs)` after converting duration to milliseconds. |
+
+Parameter troubleshooting for the Now Playing blocks:
+
+- If a block socket is named `p`, treat it as **position/progress**: the current place in the song.
+- If a block socket is named `d`, treat it as **duration**: the total length of the song.
+- `position` and `duration` must use the same units. Recommended: milliseconds. Example: a 3 minute 45 second song is `225000` milliseconds.
+- `SetCurrentTime` and `SetDurationTime` need already-formatted text. Use `formatMillis(225000)` to display `3:45`.
+- These UI blocks do not fix missing Player features. If the built-in Player cannot report position/duration or seek, maintain progress with Clock variables or use a player extension that provides current-position, duration, and seek blocks.
 
 ### Playlist, favorites, recently played, and queue blocks
 
