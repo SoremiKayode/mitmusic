@@ -97,6 +97,7 @@ public class CodeIgniteMITMusic extends AndroidViewComponent {
     private final HashMap<String, ArrayList<TextView>> iconViews = new HashMap<String, ArrayList<TextView>>();
     private final HashMap<String, String> iconFallbacks = new HashMap<String, String>();
     private final HashMap<String, String> iconImagePaths = new HashMap<String, String>();
+    private final HashSet<String> dispatchingEvents = new HashSet<String>();
 
     public CodeIgniteMITMusic(ComponentContainer container) {
         super(container);
@@ -224,43 +225,51 @@ public class CodeIgniteMITMusic extends AndroidViewComponent {
     @SimpleFunction(description="Scans MediaStore music whose file path starts with, or contains, the supplied folder path/name.") public void LoadMusicFromFolder(String folder){ loadMusicFromMediaStore(folder); }
     @SimpleFunction public void LoadMusicFromPath(String path){ songs.clear(); Song found=findSong(path); if(found.path.length()>0)songs.add(found); else songs.add(new Song(path,titleFromPath(path),"Unknown Artist","0:00","","")); renderSongs(songs); MusicDatabaseUpdated(songs.size(),toJson(songs)); }
     @SimpleFunction public void CreatePlaylist(String name){ if(!playlists.containsKey(name))playlists.put(name,new ArrayList<String>()); PlaylistCreated(name); } @SimpleFunction public void DeletePlaylist(String name){ playlists.remove(name); PlaylistDeleted(name); } @SimpleFunction public void RenamePlaylist(String oldName,String newName){ ArrayList<String> items=playlists.remove(oldName); if(items==null)items=new ArrayList<String>(); playlists.put(newName,items); PlaylistRenamed(oldName,newName); } @SimpleFunction public void AddSongToPlaylist(String playlist,String path){ if(!playlists.containsKey(playlist))playlists.put(playlist,new ArrayList<String>()); ArrayList<String> items=playlists.get(playlist); if(!items.contains(path))items.add(path); SongAdded(playlist,path); } @SimpleFunction public void RemoveSongFromPlaylist(String playlist,String path){ if(playlists.containsKey(playlist))playlists.get(playlist).remove(path); SongRemoved(playlist,path); } @SimpleFunction public void LoadPlaylist(String name){ songs.clear(); if(playlists.containsKey(name)) for(String path:playlists.get(name)) songs.add(findSong(path)); renderSongs(songs); PlaylistSelected(name); } @SimpleFunction public void DisplayPlaylist(String json){ LoadMusicIntoList(json); }
-    @SimpleFunction(description="Starts or resumes the extension's built-in MediaPlayer for the current song.") public void PlayMusic(){ PlayClicked(); ResumeInternalPlayer(); } @SimpleFunction(description="Pauses the extension's built-in MediaPlayer.") public void PauseMusic(){ PauseClicked(); PauseInternalPlayer(); } @SimpleFunction(description="Resumes the extension's built-in MediaPlayer.") public void ResumeMusic(){ PlayClicked(); ResumeInternalPlayer(); } @SimpleFunction(description="Stops and releases the extension's built-in MediaPlayer.") public void StopMusic(){ StopInternalPlayer(); ControlButtonClicked("Stop"); } @SimpleFunction public void NextMusic(){ NextClicked(); PlayNextSong(); } @SimpleFunction public void PreviousMusic(){ PreviousClicked(); PlayPreviousSong(); } @SimpleFunction public void ShuffleMusic(){ internalShuffle=!internalShuffle; ShuffleClicked(); } @SimpleFunction public void RepeatMusic(){ internalRepeat=!internalRepeat; RepeatClicked(); }
+    // Playback blocks are kept alphabetically ordered so they are easy to find in the Blocks editor.
+    @SimpleFunction(description="Returns the built-in MediaPlayer duration in milliseconds, or 0 if no internal player is active.")
+    public int CurrentDuration(){ return mediaPlayer!=null?mediaPlayer.getDuration():0; }
 
-    @SimpleFunction(description="Plays the song at a 1-based library index with the extension's built-in MediaPlayer, updates Now Playing, and opens Now Playing.")
-    public void PlayIndex(int index){
-        if(index<1||index>songs.size())return;
-        Song song=songs.get(index-1);
-        internalCurrentIndex=index;
-        sharePath=song.path;
-        startInternalPlayer(song);
-        updateNowPlaying(song,0);
-        OpenNowPlayingScreen();
-        AddRecentlyPlayed(song.path);
-    }
+    @SimpleFunction(description="Returns the built-in MediaPlayer current position in milliseconds, or 0 if no internal player is active.")
+    public int CurrentPosition(){ return mediaPlayer!=null?mediaPlayer.getCurrentPosition():0; }
 
-    @SimpleFunction(description="Alias for PlayIndex(index).")
-    public void PlaySongAtIndex(int index){ PlayIndex(index); }
+    @SimpleFunction(description="Selects and plays the next song in the current library. Shuffle mode is honored and the list wraps at the end.")
+    public void NextMusic(){ NextClicked(); PlayNextSong(); }
 
-    @SimpleFunction(description="Plays the next song from the current library list. Honors ShuffleMusic and wraps at the end.")
+    @SimpleFunction(description="Pauses the extension's built-in MediaPlayer. Call ResumeMusic to continue playback.")
+    public void PauseMusic(){ PauseClicked(); PauseInternalPlayer(); }
+
+    @SimpleFunction(description="Starts or resumes the extension's built-in MediaPlayer for the selected song.")
+    public void PlayMusic(){ PlayClicked(); ResumeInternalPlayer(); }
+
+    @SimpleFunction(description="Plays the next song in the current library. Shuffle mode is honored and the list wraps at the end.")
     public void PlayNextSong(){
         int count=songs.size();
         if(count==0)return;
         int next=internalCurrentIndex<=0?1:internalCurrentIndex+1;
         if(internalShuffle&&count>1){ do{ next=random.nextInt(count)+1; }while(next==internalCurrentIndex); }
         if(next>count)next=1;
-        PlayIndex(next);
+        playSongAtIndex(next);
     }
-
-    @SimpleFunction(description="Lowercase alias block for PlayNextSong.")
-    public void playNextSong(){ PlayNextSong(); }
 
     @SimpleFunction(description="Plays the previous song from the current library list and wraps to the last song from the start.")
     public void PlayPreviousSong(){
         int count=songs.size();
         if(count==0)return;
         int previous=internalCurrentIndex<=1?count:internalCurrentIndex-1;
-        PlayIndex(previous);
+        playSongAtIndex(previous);
     }
+
+    @SimpleFunction(description="Plays the song at a 1-based index in the current library, updates Now Playing, and opens the Now Playing screen. Invalid indexes are ignored.")
+    public void PlaySongAtIndex(int index){ playSongAtIndex(index); }
+
+    @SimpleFunction(description="Selects and plays the previous song in the current library, wrapping to the last song when necessary.")
+    public void PreviousMusic(){ PreviousClicked(); PlayPreviousSong(); }
+
+    @SimpleFunction(description="Toggles repeat mode for the built-in player. When enabled, the current song restarts after it finishes.")
+    public void RepeatMusic(){ internalRepeat=!internalRepeat; RepeatClicked(); }
+
+    @SimpleFunction(description="Resumes paused playback, or starts the currently selected song when the player has not been created yet.")
+    public void ResumeMusic(){ PlayClicked(); ResumeInternalPlayer(); }
 
     @SimpleFunction(description="Seeks the extension's built-in MediaPlayer to position milliseconds and updates the visual seek bar. If you use an external player with a SeekTo/SetPosition block, call YourPlayer.SeekTo(position) from SeekChanged instead.")
     public void SeekTo(int position){
@@ -272,11 +281,11 @@ public class CodeIgniteMITMusic extends AndroidViewComponent {
     @SimpleFunction(description="Alias for SeekTo(position), useful with audio players that call this SetPosition.")
     public void SetPosition(int position){ SeekTo(position); }
 
-    @SimpleFunction(description="Returns the built-in MediaPlayer current position in milliseconds, or 0 if no internal player is active.")
-    public int CurrentPosition(){ return mediaPlayer!=null?mediaPlayer.getCurrentPosition():0; }
+    @SimpleFunction(description="Toggles shuffle mode for next-song selection.")
+    public void ShuffleMusic(){ internalShuffle=!internalShuffle; ShuffleClicked(); }
 
-    @SimpleFunction(description="Returns the built-in MediaPlayer duration in milliseconds, or 0 if no internal player is active.")
-    public int CurrentDuration(){ return mediaPlayer!=null?mediaPlayer.getDuration():0; }
+    @SimpleFunction(description="Stops playback and releases the extension's built-in MediaPlayer.")
+    public void StopMusic(){ StopInternalPlayer(); ControlButtonClicked("Stop"); }
 
     @SimpleFunction public void ShareMusic(String path){ sharePath=path; ShareClicked(path); } @SimpleFunction public void ShareToWhatsApp(String path){ ShareClicked(path); } @SimpleFunction public void ShareToFacebook(String path){ ShareClicked(path); } @SimpleFunction public void ShareToInstagram(String path){ ShareClicked(path); } @SimpleFunction public void ShareToTelegram(String path){ ShareClicked(path); } @SimpleFunction public void ShareToMessenger(String path){ ShareClicked(path); } @SimpleFunction public void ShareToSystem(String path){ ShareClicked(path); }
     @SimpleFunction public void AddToFavorites(String path){ favorites.add(path); FavoriteAdded(path); } @SimpleFunction public void RemoveFromFavorites(String path){ favorites.remove(path); FavoriteRemoved(path); } @SimpleFunction public void LoadFavorites(){ renderSongs(pathsToSongs(new ArrayList<String>(favorites))); } @SimpleFunction public void DisplayFavorites(String json){ LoadMusicIntoList(json); } @SimpleFunction public void AddRecentlyPlayed(String path){ recentlyPlayed.remove(path); recentlyPlayed.add(0,path); } @SimpleFunction public void LoadRecentlyPlayed(){ renderSongs(pathsToSongs(recentlyPlayed)); } @SimpleFunction public void ClearRecentlyPlayed(){ recentlyPlayed.clear(); } @SimpleFunction public void AddToQueue(String path){ queue.add(path); QueueUpdated(); } @SimpleFunction public void RemoveFromQueue(String path){ queue.remove(path); QueueUpdated(); } @SimpleFunction public void MoveQueueItem(int from,int to){ if(from>0&&from<=queue.size()&&to>0&&to<=queue.size()){ String item=queue.remove(from-1); queue.add(to-1,item); } QueueUpdated(); } @SimpleFunction public void LoadQueue(){ renderSongs(pathsToSongs(queue)); } @SimpleFunction public void ClearQueue(){ queue.clear(); QueueUpdated(); } @SimpleFunction public void SetDefaultAlbumArt(String path){ defaultAlbumArtPath=path; SetAlbumArt(path); } @SimpleFunction public void LoadAlbumArt(String path){ SetAlbumArt(path); }
@@ -286,11 +295,11 @@ public class CodeIgniteMITMusic extends AndroidViewComponent {
     @SimpleFunction public void SetPlayIcon(String p){ setIconImage("play",p); } @SimpleFunction public void SetPauseIcon(String p){ setIconImage("pause",p); } @SimpleFunction public void SetNextIcon(String p){ setIconImage("next",p); } @SimpleFunction public void SetPreviousIcon(String p){ setIconImage("previous",p); } @SimpleFunction public void SetShuffleIcon(String p){ setIconImage("shuffle",p); } @SimpleFunction public void SetRepeatIcon(String p){ setIconImage("repeat",p); } @SimpleFunction public void SetFavoriteIcon(String p){ setIconImage("favorite",p); } @SimpleFunction public void SetPlaylistIcon(String p){ setIconImage("playlist",p); } @SimpleFunction public void SetSearchIcon(String p){ setIconImage("search",p); } @SimpleFunction public void SetSidebarIcon(String p){ setIconImage("sidebar",p); } @SimpleFunction public void SetAlbumPlaceholder(String p){ defaultAlbumArtPath=p; SetAlbumArt(p); } @SimpleFunction public void SetShareIcon(String p){ setIconImage("share",p); } @SimpleFunction public void SetSearchIconImage(String p){ SetSearchIcon(p); } @SimpleFunction public void SetClearIcon(String p){} @SimpleFunction public void SetShareButtonImage(String p){ SetShareIcon(p); }
     @SimpleFunction public void SetPlayButton(String p){ SetPlayIcon(p); } @SimpleFunction public void SetPauseButton(String p){ SetPauseIcon(p); } @SimpleFunction public void SetPreviousButton(String p){ SetPreviousIcon(p); } @SimpleFunction public void SetNextButton(String p){ SetNextIcon(p); } @SimpleFunction public void SetShuffleButton(String p){ SetShuffleIcon(p); } @SimpleFunction public void SetRepeatButton(String p){ SetRepeatIcon(p); } @SimpleFunction public void SetFavoriteButton(String p){ SetFavoriteIcon(p); } @SimpleFunction public void SetQueueButton(String p){ setIconImage("queue",p); } @SimpleFunction public void SetShareButton(String p){ SetShareIcon(p); }
 
-    @SimpleEvent public void SearchTextChanged(String searchText){ EventDispatcher.dispatchEvent(this,"SearchTextChanged",searchText); SearchMusic(searchText); } @SimpleEvent public void SearchCompleted(String resultList){ EventDispatcher.dispatchEvent(this,"SearchCompleted",resultList); } @SimpleEvent public void SearchItemClicked(String musicPath,String songName){ EventDispatcher.dispatchEvent(this,"SearchItemClicked",musicPath,songName); }
-    @SimpleEvent public void MusicClicked(int musicIndex,String musicPath,String songName,String artist,String duration,String album){ sharePath=musicPath; EventDispatcher.dispatchEvent(this,"MusicClicked",musicIndex,musicPath,songName,artist,duration,album); EventDispatcher.dispatchEvent(this,"MusicSelected",musicIndex,musicPath); } @SimpleEvent public void MusicLongPressed(int index,String path){ EventDispatcher.dispatchEvent(this,"MusicLongPressed",index,path); } @SimpleEvent public void ShareIconClicked(String path){ EventDispatcher.dispatchEvent(this,"ShareIconClicked",path); } @SimpleEvent public void PlaylistIconClicked(String path){ EventDispatcher.dispatchEvent(this,"PlaylistIconClicked",path); } @SimpleEvent public void FavoriteClicked(String path){ EventDispatcher.dispatchEvent(this,"FavoriteClicked",path); }
+    @SimpleEvent public void SearchTextChanged(String searchText){ if(dispatchEventOnce("SearchTextChanged",searchText)) SearchMusic(searchText); } @SimpleEvent public void SearchCompleted(String resultList){ dispatchEventOnce("SearchCompleted",resultList); } @SimpleEvent public void SearchItemClicked(String musicPath,String songName){ dispatchEventOnce("SearchItemClicked",musicPath,songName); }
+    @SimpleEvent public void MusicClicked(int musicIndex,String musicPath,String songName,String artist,String duration,String album){ sharePath=musicPath; dispatchEventOnce("MusicClicked",musicIndex,musicPath,songName,artist,duration,album); dispatchEventOnce("MusicSelected",musicIndex,musicPath); } @SimpleEvent public void MusicLongPressed(int index,String path){ dispatchEventOnce("MusicLongPressed",index,path); } @SimpleEvent public void ShareIconClicked(String path){ dispatchEventOnce("ShareIconClicked",path); } @SimpleEvent public void PlaylistIconClicked(String path){ dispatchEventOnce("PlaylistIconClicked",path); } @SimpleEvent public void FavoriteClicked(String path){ dispatchEventOnce("FavoriteClicked",path); }
     @SimpleEvent public void PlaylistOpened(){ EventDispatcher.dispatchEvent(this,"PlaylistOpened"); } @SimpleEvent public void PlaylistClosed(){ EventDispatcher.dispatchEvent(this,"PlaylistClosed"); } @SimpleEvent public void DrawerOpened(){ EventDispatcher.dispatchEvent(this,"DrawerOpened"); } @SimpleEvent public void DrawerClosed(){ EventDispatcher.dispatchEvent(this,"DrawerClosed"); } @SimpleEvent public void SidebarItemClicked(String item){ EventDispatcher.dispatchEvent(this,"SidebarItemClicked",item); }
     @SimpleEvent public void PlaylistCreated(String n){ EventDispatcher.dispatchEvent(this,"PlaylistCreated",n); } @SimpleEvent public void PlaylistDeleted(String n){ EventDispatcher.dispatchEvent(this,"PlaylistDeleted",n); } @SimpleEvent public void SongAdded(String p,String path){ EventDispatcher.dispatchEvent(this,"SongAdded",p,path); } @SimpleEvent public void SongRemoved(String p,String path){ EventDispatcher.dispatchEvent(this,"SongRemoved",p,path); } @SimpleEvent public void PlaylistSelected(String n){ EventDispatcher.dispatchEvent(this,"PlaylistSelected",n); }
-    @SimpleEvent public void PlayClicked(){ EventDispatcher.dispatchEvent(this,"PlayClicked"); } @SimpleEvent public void PauseClicked(){ EventDispatcher.dispatchEvent(this,"PauseClicked"); } @SimpleEvent public void NextClicked(){ EventDispatcher.dispatchEvent(this,"NextClicked"); } @SimpleEvent public void PreviousClicked(){ EventDispatcher.dispatchEvent(this,"PreviousClicked"); } @SimpleEvent public void ShuffleClicked(){ EventDispatcher.dispatchEvent(this,"ShuffleClicked"); } @SimpleEvent public void RepeatClicked(){ EventDispatcher.dispatchEvent(this,"RepeatClicked"); } @SimpleEvent public void QueueClicked(){ EventDispatcher.dispatchEvent(this,"QueueClicked"); } @SimpleEvent public void ShareClicked(String path){ EventDispatcher.dispatchEvent(this,"ShareClicked",path); } @SimpleEvent public void ControlButtonClicked(String name){ EventDispatcher.dispatchEvent(this,"ControlButtonClicked",name); } @SimpleEvent public void SeekChanged(int position){ EventDispatcher.dispatchEvent(this,"SeekChanged",position); } @SimpleEvent public void ScreenChanged(String screen){ EventDispatcher.dispatchEvent(this,"ScreenChanged",screen); } @SimpleEvent public void FABClicked(){ EventDispatcher.dispatchEvent(this,"FABClicked"); } @SimpleEvent public void FavoriteAdded(String p){ EventDispatcher.dispatchEvent(this,"FavoriteAdded",p); } @SimpleEvent public void FavoriteRemoved(String p){ EventDispatcher.dispatchEvent(this,"FavoriteRemoved",p); } @SimpleEvent public void QueueUpdated(){ EventDispatcher.dispatchEvent(this,"QueueUpdated"); }
+    @SimpleEvent public void PlayClicked(){ dispatchEventOnce("PlayClicked"); } @SimpleEvent public void PauseClicked(){ dispatchEventOnce("PauseClicked"); } @SimpleEvent public void NextClicked(){ dispatchEventOnce("NextClicked"); } @SimpleEvent public void PreviousClicked(){ dispatchEventOnce("PreviousClicked"); } @SimpleEvent public void ShuffleClicked(){ dispatchEventOnce("ShuffleClicked"); } @SimpleEvent public void RepeatClicked(){ dispatchEventOnce("RepeatClicked"); } @SimpleEvent public void QueueClicked(){ dispatchEventOnce("QueueClicked"); } @SimpleEvent public void ShareClicked(String path){ dispatchEventOnce("ShareClicked",path); } @SimpleEvent public void ControlButtonClicked(String name){ dispatchEventOnce("ControlButtonClicked",name); } @SimpleEvent public void SeekChanged(int position){ dispatchEventOnce("SeekChanged",position); } @SimpleEvent public void ScreenChanged(String screen){ dispatchEventOnce("ScreenChanged",screen); } @SimpleEvent public void FABClicked(){ dispatchEventOnce("FABClicked"); } @SimpleEvent public void FavoriteAdded(String p){ dispatchEventOnce("FavoriteAdded",p); } @SimpleEvent public void FavoriteRemoved(String p){ dispatchEventOnce("FavoriteRemoved",p); } @SimpleEvent public void QueueUpdated(){ dispatchEventOnce("QueueUpdated"); }
 
     @SimpleEvent public void MusicDatabaseUpdated(int count,String resultList){ EventDispatcher.dispatchEvent(this,"MusicDatabaseUpdated",count,resultList); }
     @SimpleEvent public void PlaybackStarted(int index,String path){ EventDispatcher.dispatchEvent(this,"PlaybackStarted",index,path); }
@@ -298,21 +307,33 @@ public class CodeIgniteMITMusic extends AndroidViewComponent {
     @SimpleEvent public void PlaybackError(String message){ EventDispatcher.dispatchEvent(this,"PlaybackError",message); }
     @SimpleEvent public void PlaylistRenamed(String oldName,String newName){ EventDispatcher.dispatchEvent(this,"PlaylistRenamed",oldName,newName); }
 
+    private boolean dispatchEventOnce(String eventName,Object... args){
+        if(dispatchingEvents.contains(eventName))return false;
+        dispatchingEvents.add(eventName);
+        try{
+            EventDispatcher.dispatchEvent(this,eventName,args);
+            return true;
+        }finally{
+            dispatchingEvents.remove(eventName);
+        }
+    }
+
 
     private void startInternalPlayer(final Song song){
         StopInternalPlayer();
         mediaPlayer=new MediaPlayer();
         try{
             if(song.path.startsWith("content://"))mediaPlayer.setDataSource(container.$context(),Uri.parse(song.path)); else mediaPlayer.setDataSource(song.path);
-            mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener(){ public void onCompletion(MediaPlayer mp){ PlaybackCompleted(); if(internalRepeat)PlayIndex(internalCurrentIndex); else PlayNextSong(); }});
+            mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener(){ public void onCompletion(MediaPlayer mp){ PlaybackCompleted(); if(internalRepeat)playSongAtIndex(internalCurrentIndex); else PlayNextSong(); }});
             mediaPlayer.prepare();
             mediaPlayer.start();
             PlaybackStarted(internalCurrentIndex,song.path);
         }catch(Exception e){ PlaybackError(e.getMessage()==null?"Unable to play audio":e.getMessage()); StopInternalPlayer(); }
     }
-    private void ResumeInternalPlayer(){ if(mediaPlayer!=null)mediaPlayer.start(); else if(internalCurrentIndex>0)PlayIndex(internalCurrentIndex); }
+    private void ResumeInternalPlayer(){ if(mediaPlayer!=null)mediaPlayer.start(); else if(internalCurrentIndex>0)playSongAtIndex(internalCurrentIndex); }
     private void PauseInternalPlayer(){ if(mediaPlayer!=null&&mediaPlayer.isPlaying())mediaPlayer.pause(); }
     private void StopInternalPlayer(){ if(mediaPlayer!=null){ try{ mediaPlayer.stop(); }catch(Exception e){} mediaPlayer.release(); mediaPlayer=null; }}
+    private void playSongAtIndex(int index){ if(index<1||index>songs.size())return; Song song=songs.get(index-1); internalCurrentIndex=index; sharePath=song.path; startInternalPlayer(song); updateNowPlaying(song,0); OpenNowPlayingScreen(); AddRecentlyPlayed(song.path); }
     private void updateNowPlaying(Song song,int position){ SetSongTitle(song.title); SetArtist(song.artist); SetAlbumArt(song.albumArt); int duration=durationTextToMillis(song.duration); if(mediaPlayer!=null)duration=mediaPlayer.getDuration(); SetDuration(duration); SetCurrentPosition(position); SetCurrentTime(formatDuration(position)); SetDurationTime(formatDuration(duration)); }
     private int durationTextToMillis(String durationText){ if(durationText==null)return 0; String[] parts=durationText.split(":"); try{ if(parts.length==2)return ((Integer.parseInt(parts[0])*60)+Integer.parseInt(parts[1]))*1000; if(parts.length==3)return ((Integer.parseInt(parts[0])*3600)+(Integer.parseInt(parts[1])*60)+Integer.parseInt(parts[2]))*1000; }catch(Exception e){} return 0; }
 

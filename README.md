@@ -75,7 +75,7 @@ When the user taps a song, the extension raises:
 - `MusicClicked(musicIndex, musicPath, songName, artist, duration, album)`
 - `MusicSelected(musicIndex, musicPath)`
 
-The extension does not play audio by itself. Connect these events to your preferred player component, such as MIT App Inventor's Player component:
+You can connect these events to your preferred player component, such as MIT App Inventor's Player component:
 
 1. In `MusicClicked`, set `Player.Source` to `musicPath`.
 2. Call `Player.Start`.
@@ -95,7 +95,25 @@ The Now Playing screen dispatches button events for your blocks to handle:
 - `SeekChanged(position)`: seek your player to the selected position if your player supports seeking. If your audio player has `SeekTo` / `SetPosition`, use this block pattern: `when CodeIgniteMITMusic.SeekChanged position` → `call YourPlayer.SeekTo(position)` (or `call YourPlayer.SetPosition(position)`).
 - `ControlButtonClicked(name)`: generic event for any control icon that was tapped.
 
-If your App Inventor player component cannot seek, this extension also includes optional built-in MediaPlayer blocks: `PlayIndex(index)`, `PlayNextSong`, lowercase `playNextSong`, `PlayPreviousSong`, `SeekTo(position)`, `SetPosition(position)`, `CurrentPosition`, and `CurrentDuration`. You can either keep using events with your external player, or let these built-in blocks own playback and seeking.
+If your App Inventor player component cannot seek, the extension also includes optional built-in MediaPlayer blocks. They are listed alphabetically below and include descriptions in the Blocks editor:
+
+- `CurrentDuration`: gets the current song duration in milliseconds.
+- `CurrentPosition`: gets the current playback position in milliseconds.
+- `NextMusic`: raises `NextClicked` and plays the next song.
+- `PauseMusic`: pauses built-in playback.
+- `PlayMusic`: starts or resumes the selected song.
+- `PlayNextSong`: plays the next song, honoring shuffle mode.
+- `PlayPreviousSong`: plays the previous song.
+- `PlaySongAtIndex(index)`: plays a song using a 1-based library index; invalid indexes are ignored.
+- `PreviousMusic`: raises `PreviousClicked` and plays the previous song.
+- `RepeatMusic`: toggles repeat mode.
+- `ResumeMusic`: resumes paused playback.
+- `SeekTo(position)`: seeks to a millisecond position.
+- `SetPosition(position)`: alias for `SeekTo(position)`.
+- `ShuffleMusic`: toggles shuffle mode.
+- `StopMusic`: stops and releases built-in playback.
+
+The ambiguous `PlayIndex` block and duplicate lowercase `playNextSong` block are no longer exposed. Use `PlaySongAtIndex` and `PlayNextSong`, respectively. You can either keep using events with your external player or let these built-in blocks own playback and seeking.
 
 Update the Now Playing progress with:
 
