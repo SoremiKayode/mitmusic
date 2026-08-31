@@ -1,6 +1,7 @@
 package chatinputbox.chatinputboxnew;
 
 import android.Manifest;
+import android.media.MediaPlayer;
 import android.content.ContentUris;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -40,6 +41,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Random;
 
 public class CodeIgniteMITMusic extends AndroidViewComponent {
     private final ComponentContainer container;
@@ -87,6 +89,11 @@ public class CodeIgniteMITMusic extends AndroidViewComponent {
     private String currentScreen = "Library";
     private String sharePath = "";
     private String defaultAlbumArtPath = "";
+    private MediaPlayer mediaPlayer;
+    private int internalCurrentIndex = 0;
+    private boolean internalShuffle = false;
+    private boolean internalRepeat = false;
+    private final Random random = new Random();
     private final HashMap<String, ArrayList<TextView>> iconViews = new HashMap<String, ArrayList<TextView>>();
     private final HashMap<String, String> iconFallbacks = new HashMap<String, String>();
     private final HashMap<String, String> iconImagePaths = new HashMap<String, String>();
@@ -163,7 +170,7 @@ public class CodeIgniteMITMusic extends AndroidViewComponent {
     private LinearLayout buildLibraryScreen(){ LinearLayout page=new LinearLayout(container.$context()); page.setOrientation(LinearLayout.VERTICAL); page.setPadding(dp(14), dp(8), dp(14), dp(8)); dropdownList=new LinearLayout(container.$context()); dropdownList.setOrientation(LinearLayout.VERTICAL); dropdownList.setVisibility(View.GONE); emptyStateText=label("No songs yet\nTap the update button or load a list from blocks.",16,false); emptyStateText.setGravity(Gravity.CENTER); ScrollView scroll=new ScrollView(container.$context()); songList=new LinearLayout(container.$context()); songList.setOrientation(LinearLayout.VERTICAL); scroll.addView(songList); page.addView(dropdownList); page.addView(emptyStateText,new LinearLayout.LayoutParams(-1,dp(140))); page.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); return page; }
     private LinearLayout buildNowPlayingScreen(){ LinearLayout p=new LinearLayout(container.$context()); p.setOrientation(LinearLayout.VERTICAL); p.setGravity(Gravity.CENTER_HORIZONTAL); p.setPadding(dp(24),dp(18),dp(24),dp(18)); albumArt=new ImageView(container.$context()); albumArt.setBackground(round(cardColor,28)); nowTitle=label("Song Title",24,true); nowArtist=label("Artist",16,false); seekBar=new SeekBar(container.$context()); seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){ public void onProgressChanged(SeekBar b,int progress,boolean fromUser){ if(fromUser) SeekChanged(progress);} public void onStartTrackingTouch(SeekBar b){} public void onStopTrackingTouch(SeekBar b){} }); LinearLayout times=new LinearLayout(container.$context()); times.setGravity(Gravity.CENTER); currentTime=label("0:00",12,false); durationTime=label("0:00",12,false); times.addView(currentTime,new LinearLayout.LayoutParams(0,-2,1)); times.addView(durationTime); p.addView(albumArt,new LinearLayout.LayoutParams(dp(280),dp(280))); p.addView(nowTitle); p.addView(nowArtist); p.addView(seekBar,new LinearLayout.LayoutParams(-1,-2)); p.addView(times,new LinearLayout.LayoutParams(-1,-2)); p.addView(controlRow(new String[]{"↩","⇄","◀","▶","Ⅱ","▶▶","♡","↗","≡","⤴"})); return p; }
     private LinearLayout controlRow(String[] names){ LinearLayout r=new LinearLayout(container.$context()); r.setGravity(Gravity.CENTER); for(final String n:names) r.addView(icon(n,new View.OnClickListener(){ public void onClick(View v){ control(n); }})); return r; }
-    private void control(String n){ if(n.equals("▶")) PlayClicked(); else if(n.equals("Ⅱ")) PauseClicked(); else if(n.equals("▶▶")) NextClicked(); else if(n.equals("◀")) PreviousClicked(); else if(n.equals("⇄")) ShuffleClicked(); else if(n.equals("↩")) RepeatClicked(); else if(n.equals("♡")) FavoriteClicked(sharePath); else if(n.equals("≡")) QueueClicked(); else if(n.equals("↗")||n.equals("⤴")) ShareClicked(sharePath); ControlButtonClicked(n); }
+    private void control(String n){ if(n.equals("▶")){ PlayClicked(); ResumeInternalPlayer(); } else if(n.equals("Ⅱ")){ PauseClicked(); PauseInternalPlayer(); } else if(n.equals("▶▶")){ NextClicked(); PlayNextSong(); } else if(n.equals("◀")){ PreviousClicked(); PlayPreviousSong(); } else if(n.equals("⇄")){ internalShuffle=!internalShuffle; ShuffleClicked(); } else if(n.equals("↩")){ internalRepeat=!internalRepeat; RepeatClicked(); } else if(n.equals("♡")) FavoriteClicked(sharePath); else if(n.equals("≡")) QueueClicked(); else if(n.equals("↗")||n.equals("⤴")) ShareClicked(sharePath); ControlButtonClicked(n); }
 
     private void renderSongs(ArrayList<Song> data){ songList.removeAllViews(); emptyStateText.setVisibility(data.size()==0?View.VISIBLE:View.GONE); for(int i=0;i<data.size();i++){ final Song s=data.get(i); final int index=i+1; LinearLayout row=new LinearLayout(container.$context()); row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(dp(12),dp(10),dp(8),dp(10)); row.setBackground(round(cardColor,18)); TextView art=label("♪",28,true); TextView meta=label(s.title+"\n"+s.artist+" • "+s.duration,15,true); row.addView(art,new LinearLayout.LayoutParams(dp(54),dp(54))); row.addView(meta,new LinearLayout.LayoutParams(0,-2,1)); row.addView(icon("↗", new View.OnClickListener(){ public void onClick(View v){ ShareIconClicked(s.path); }})); row.addView(icon("＋", new View.OnClickListener(){ public void onClick(View v){ PlaylistIconClicked(s.path); }})); row.addView(icon("♡", new View.OnClickListener(){ public void onClick(View v){ FavoriteClicked(s.path); }})); row.setOnClickListener(new View.OnClickListener(){ public void onClick(View v){ MusicClicked(index,s.path,s.title,s.artist,s.duration,s.album); }}); row.setOnLongClickListener(new View.OnLongClickListener(){ public boolean onLongClick(View v){ MusicLongPressed(index,s.path); return true; }}); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,dp(10)); songList.addView(row,lp);} }
 
@@ -217,7 +224,60 @@ public class CodeIgniteMITMusic extends AndroidViewComponent {
     @SimpleFunction(description="Scans MediaStore music whose file path starts with, or contains, the supplied folder path/name.") public void LoadMusicFromFolder(String folder){ loadMusicFromMediaStore(folder); }
     @SimpleFunction public void LoadMusicFromPath(String path){ songs.clear(); Song found=findSong(path); if(found.path.length()>0)songs.add(found); else songs.add(new Song(path,titleFromPath(path),"Unknown Artist","0:00","","")); renderSongs(songs); MusicDatabaseUpdated(songs.size(),toJson(songs)); }
     @SimpleFunction public void CreatePlaylist(String name){ if(!playlists.containsKey(name))playlists.put(name,new ArrayList<String>()); PlaylistCreated(name); } @SimpleFunction public void DeletePlaylist(String name){ playlists.remove(name); PlaylistDeleted(name); } @SimpleFunction public void RenamePlaylist(String oldName,String newName){ ArrayList<String> items=playlists.remove(oldName); if(items==null)items=new ArrayList<String>(); playlists.put(newName,items); PlaylistRenamed(oldName,newName); } @SimpleFunction public void AddSongToPlaylist(String playlist,String path){ if(!playlists.containsKey(playlist))playlists.put(playlist,new ArrayList<String>()); ArrayList<String> items=playlists.get(playlist); if(!items.contains(path))items.add(path); SongAdded(playlist,path); } @SimpleFunction public void RemoveSongFromPlaylist(String playlist,String path){ if(playlists.containsKey(playlist))playlists.get(playlist).remove(path); SongRemoved(playlist,path); } @SimpleFunction public void LoadPlaylist(String name){ songs.clear(); if(playlists.containsKey(name)) for(String path:playlists.get(name)) songs.add(findSong(path)); renderSongs(songs); PlaylistSelected(name); } @SimpleFunction public void DisplayPlaylist(String json){ LoadMusicIntoList(json); }
-    @SimpleFunction public void PlayMusic(){ PlayClicked(); } @SimpleFunction public void PauseMusic(){ PauseClicked(); } @SimpleFunction public void ResumeMusic(){ PlayClicked(); } @SimpleFunction public void StopMusic(){ ControlButtonClicked("Stop"); } @SimpleFunction public void NextMusic(){ NextClicked(); } @SimpleFunction public void PreviousMusic(){ PreviousClicked(); } @SimpleFunction public void ShuffleMusic(){ ShuffleClicked(); } @SimpleFunction public void RepeatMusic(){ RepeatClicked(); }
+    @SimpleFunction(description="Starts or resumes the extension's built-in MediaPlayer for the current song.") public void PlayMusic(){ PlayClicked(); ResumeInternalPlayer(); } @SimpleFunction(description="Pauses the extension's built-in MediaPlayer.") public void PauseMusic(){ PauseClicked(); PauseInternalPlayer(); } @SimpleFunction(description="Resumes the extension's built-in MediaPlayer.") public void ResumeMusic(){ PlayClicked(); ResumeInternalPlayer(); } @SimpleFunction(description="Stops and releases the extension's built-in MediaPlayer.") public void StopMusic(){ StopInternalPlayer(); ControlButtonClicked("Stop"); } @SimpleFunction public void NextMusic(){ NextClicked(); PlayNextSong(); } @SimpleFunction public void PreviousMusic(){ PreviousClicked(); PlayPreviousSong(); } @SimpleFunction public void ShuffleMusic(){ internalShuffle=!internalShuffle; ShuffleClicked(); } @SimpleFunction public void RepeatMusic(){ internalRepeat=!internalRepeat; RepeatClicked(); }
+
+    @SimpleFunction(description="Plays the song at a 1-based library index with the extension's built-in MediaPlayer, updates Now Playing, and opens Now Playing.")
+    public void PlayIndex(int index){
+        if(index<1||index>songs.size())return;
+        Song song=songs.get(index-1);
+        internalCurrentIndex=index;
+        sharePath=song.path;
+        startInternalPlayer(song);
+        updateNowPlaying(song,0);
+        OpenNowPlayingScreen();
+        AddRecentlyPlayed(song.path);
+    }
+
+    @SimpleFunction(description="Alias for PlayIndex(index).")
+    public void PlaySongAtIndex(int index){ PlayIndex(index); }
+
+    @SimpleFunction(description="Plays the next song from the current library list. Honors ShuffleMusic and wraps at the end.")
+    public void PlayNextSong(){
+        int count=songs.size();
+        if(count==0)return;
+        int next=internalCurrentIndex<=0?1:internalCurrentIndex+1;
+        if(internalShuffle&&count>1){ do{ next=random.nextInt(count)+1; }while(next==internalCurrentIndex); }
+        if(next>count)next=1;
+        PlayIndex(next);
+    }
+
+    @SimpleFunction(description="Lowercase alias block for PlayNextSong.")
+    public void playNextSong(){ PlayNextSong(); }
+
+    @SimpleFunction(description="Plays the previous song from the current library list and wraps to the last song from the start.")
+    public void PlayPreviousSong(){
+        int count=songs.size();
+        if(count==0)return;
+        int previous=internalCurrentIndex<=1?count:internalCurrentIndex-1;
+        PlayIndex(previous);
+    }
+
+    @SimpleFunction(description="Seeks the extension's built-in MediaPlayer to position milliseconds and updates the visual seek bar. If you use an external player with a SeekTo/SetPosition block, call YourPlayer.SeekTo(position) from SeekChanged instead.")
+    public void SeekTo(int position){
+        if(mediaPlayer!=null)mediaPlayer.seekTo(Math.max(0,position));
+        SetCurrentPosition(Math.max(0,position));
+        SetCurrentTime(formatDuration(Math.max(0,position)));
+    }
+
+    @SimpleFunction(description="Alias for SeekTo(position), useful with audio players that call this SetPosition.")
+    public void SetPosition(int position){ SeekTo(position); }
+
+    @SimpleFunction(description="Returns the built-in MediaPlayer current position in milliseconds, or 0 if no internal player is active.")
+    public int CurrentPosition(){ return mediaPlayer!=null?mediaPlayer.getCurrentPosition():0; }
+
+    @SimpleFunction(description="Returns the built-in MediaPlayer duration in milliseconds, or 0 if no internal player is active.")
+    public int CurrentDuration(){ return mediaPlayer!=null?mediaPlayer.getDuration():0; }
+
     @SimpleFunction public void ShareMusic(String path){ sharePath=path; ShareClicked(path); } @SimpleFunction public void ShareToWhatsApp(String path){ ShareClicked(path); } @SimpleFunction public void ShareToFacebook(String path){ ShareClicked(path); } @SimpleFunction public void ShareToInstagram(String path){ ShareClicked(path); } @SimpleFunction public void ShareToTelegram(String path){ ShareClicked(path); } @SimpleFunction public void ShareToMessenger(String path){ ShareClicked(path); } @SimpleFunction public void ShareToSystem(String path){ ShareClicked(path); }
     @SimpleFunction public void AddToFavorites(String path){ favorites.add(path); FavoriteAdded(path); } @SimpleFunction public void RemoveFromFavorites(String path){ favorites.remove(path); FavoriteRemoved(path); } @SimpleFunction public void LoadFavorites(){ renderSongs(pathsToSongs(new ArrayList<String>(favorites))); } @SimpleFunction public void DisplayFavorites(String json){ LoadMusicIntoList(json); } @SimpleFunction public void AddRecentlyPlayed(String path){ recentlyPlayed.remove(path); recentlyPlayed.add(0,path); } @SimpleFunction public void LoadRecentlyPlayed(){ renderSongs(pathsToSongs(recentlyPlayed)); } @SimpleFunction public void ClearRecentlyPlayed(){ recentlyPlayed.clear(); } @SimpleFunction public void AddToQueue(String path){ queue.add(path); QueueUpdated(); } @SimpleFunction public void RemoveFromQueue(String path){ queue.remove(path); QueueUpdated(); } @SimpleFunction public void MoveQueueItem(int from,int to){ if(from>0&&from<=queue.size()&&to>0&&to<=queue.size()){ String item=queue.remove(from-1); queue.add(to-1,item); } QueueUpdated(); } @SimpleFunction public void LoadQueue(){ renderSongs(pathsToSongs(queue)); } @SimpleFunction public void ClearQueue(){ queue.clear(); QueueUpdated(); } @SimpleFunction public void SetDefaultAlbumArt(String path){ defaultAlbumArtPath=path; SetAlbumArt(path); } @SimpleFunction public void LoadAlbumArt(String path){ SetAlbumArt(path); }
     @SimpleFunction public void SetFABIcon(String path){ setIconImage("fab",path); } @SimpleFunction public void SetFABColor(int c){ fab.setBackground(round(c,32)); } @SimpleFunction public void ShowEmptyState(){ emptyStateText.setVisibility(View.VISIBLE); } @SimpleFunction public void HideEmptyState(){ emptyStateText.setVisibility(View.GONE); } @SimpleFunction public void SetEmptyStateImage(String path){} @SimpleFunction public void SetEmptyStateText(String text){ emptyStateText.setText(text); }
@@ -233,7 +293,28 @@ public class CodeIgniteMITMusic extends AndroidViewComponent {
     @SimpleEvent public void PlayClicked(){ EventDispatcher.dispatchEvent(this,"PlayClicked"); } @SimpleEvent public void PauseClicked(){ EventDispatcher.dispatchEvent(this,"PauseClicked"); } @SimpleEvent public void NextClicked(){ EventDispatcher.dispatchEvent(this,"NextClicked"); } @SimpleEvent public void PreviousClicked(){ EventDispatcher.dispatchEvent(this,"PreviousClicked"); } @SimpleEvent public void ShuffleClicked(){ EventDispatcher.dispatchEvent(this,"ShuffleClicked"); } @SimpleEvent public void RepeatClicked(){ EventDispatcher.dispatchEvent(this,"RepeatClicked"); } @SimpleEvent public void QueueClicked(){ EventDispatcher.dispatchEvent(this,"QueueClicked"); } @SimpleEvent public void ShareClicked(String path){ EventDispatcher.dispatchEvent(this,"ShareClicked",path); } @SimpleEvent public void ControlButtonClicked(String name){ EventDispatcher.dispatchEvent(this,"ControlButtonClicked",name); } @SimpleEvent public void SeekChanged(int position){ EventDispatcher.dispatchEvent(this,"SeekChanged",position); } @SimpleEvent public void ScreenChanged(String screen){ EventDispatcher.dispatchEvent(this,"ScreenChanged",screen); } @SimpleEvent public void FABClicked(){ EventDispatcher.dispatchEvent(this,"FABClicked"); } @SimpleEvent public void FavoriteAdded(String p){ EventDispatcher.dispatchEvent(this,"FavoriteAdded",p); } @SimpleEvent public void FavoriteRemoved(String p){ EventDispatcher.dispatchEvent(this,"FavoriteRemoved",p); } @SimpleEvent public void QueueUpdated(){ EventDispatcher.dispatchEvent(this,"QueueUpdated"); }
 
     @SimpleEvent public void MusicDatabaseUpdated(int count,String resultList){ EventDispatcher.dispatchEvent(this,"MusicDatabaseUpdated",count,resultList); }
+    @SimpleEvent public void PlaybackStarted(int index,String path){ EventDispatcher.dispatchEvent(this,"PlaybackStarted",index,path); }
+    @SimpleEvent public void PlaybackCompleted(){ EventDispatcher.dispatchEvent(this,"PlaybackCompleted"); }
+    @SimpleEvent public void PlaybackError(String message){ EventDispatcher.dispatchEvent(this,"PlaybackError",message); }
     @SimpleEvent public void PlaylistRenamed(String oldName,String newName){ EventDispatcher.dispatchEvent(this,"PlaylistRenamed",oldName,newName); }
+
+
+    private void startInternalPlayer(final Song song){
+        StopInternalPlayer();
+        mediaPlayer=new MediaPlayer();
+        try{
+            if(song.path.startsWith("content://"))mediaPlayer.setDataSource(container.$context(),Uri.parse(song.path)); else mediaPlayer.setDataSource(song.path);
+            mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener(){ public void onCompletion(MediaPlayer mp){ PlaybackCompleted(); if(internalRepeat)PlayIndex(internalCurrentIndex); else PlayNextSong(); }});
+            mediaPlayer.prepare();
+            mediaPlayer.start();
+            PlaybackStarted(internalCurrentIndex,song.path);
+        }catch(Exception e){ PlaybackError(e.getMessage()==null?"Unable to play audio":e.getMessage()); StopInternalPlayer(); }
+    }
+    private void ResumeInternalPlayer(){ if(mediaPlayer!=null)mediaPlayer.start(); else if(internalCurrentIndex>0)PlayIndex(internalCurrentIndex); }
+    private void PauseInternalPlayer(){ if(mediaPlayer!=null&&mediaPlayer.isPlaying())mediaPlayer.pause(); }
+    private void StopInternalPlayer(){ if(mediaPlayer!=null){ try{ mediaPlayer.stop(); }catch(Exception e){} mediaPlayer.release(); mediaPlayer=null; }}
+    private void updateNowPlaying(Song song,int position){ SetSongTitle(song.title); SetArtist(song.artist); SetAlbumArt(song.albumArt); int duration=durationTextToMillis(song.duration); if(mediaPlayer!=null)duration=mediaPlayer.getDuration(); SetDuration(duration); SetCurrentPosition(position); SetCurrentTime(formatDuration(position)); SetDurationTime(formatDuration(duration)); }
+    private int durationTextToMillis(String durationText){ if(durationText==null)return 0; String[] parts=durationText.split(":"); try{ if(parts.length==2)return ((Integer.parseInt(parts[0])*60)+Integer.parseInt(parts[1]))*1000; if(parts.length==3)return ((Integer.parseInt(parts[0])*3600)+(Integer.parseInt(parts[1])*60)+Integer.parseInt(parts[2]))*1000; }catch(Exception e){} return 0; }
 
     private void loadMusicFromMediaStore(String folder){ songs.clear(); if(folder==null||folder.length()==0)catalog.clear(); Uri uri=MediaStore.Audio.Media.EXTERNAL_CONTENT_URI; String[] projection=new String[]{MediaStore.Audio.Media._ID,MediaStore.Audio.Media.DATA,MediaStore.Audio.Media.TITLE,MediaStore.Audio.Media.ARTIST,MediaStore.Audio.Media.DURATION,MediaStore.Audio.Media.ALBUM}; String selection=MediaStore.Audio.Media.IS_MUSIC+"!=0"; Cursor c=null; try{ c=container.$context().getContentResolver().query(uri,projection,selection,null,MediaStore.Audio.Media.TITLE+" ASC"); if(c!=null){ while(c.moveToNext()){ long id=c.getLong(0); String filePath=c.getString(1); if(filePath==null)filePath=""; if(folder!=null&&folder.length()>0&&!filePath.toLowerCase().contains(folder.toLowerCase()))continue; String path=ContentUris.withAppendedId(uri,id).toString(); Song song=new Song(path,nonEmpty(c.getString(2),titleFromPath(filePath)),nonEmpty(c.getString(3),"Unknown Artist"),formatDuration(c.getLong(4)),nonEmpty(c.getString(5),""),""); songs.add(song); catalog.put(path,song); } } }catch(Exception e){ PermissionDenied(requiredAudioPermission()); } finally{ if(c!=null)c.close(); } renderSongs(songs); MusicDatabaseUpdated(songs.size(),toJson(songs)); }
     private ArrayList<Song> pathsToSongs(ArrayList<String> paths){ ArrayList<Song> result=new ArrayList<Song>(); for(String path:paths)result.add(findSong(path)); return result; }
