@@ -6,7 +6,7 @@ The extension includes in-memory playlist, favorites, queue, and recently-played
 
 ## Included UI
 
-- Music Library screen with top app bar, search bar, scrollable song list, floating update button, navigation drawer, playlist drawer, bottom navigation, and a fixed-height, scrollable search dropdown that overlays library content.
+- Music Library screen with top app bar, search bar, horizontally scrollable Library/Playlists/Favorites/Queue/History tabs, list and playlist-detail views, floating update button, navigation drawer, playlist drawer, bottom navigation, and a fixed-height, scrollable search dropdown that overlays library content.
 - Now Playing screen with album art, song title, artist, seek bar, time labels, playback controls, favorite, share, playlist/queue, and back-style controls.
 - Dark and light theme blocks plus color customization blocks.
 
@@ -175,14 +175,14 @@ Search is built into the UI and can also be controlled from blocks:
 
 ### 7. Manage playlists, favorites, recently played, and queue
 
-The extension stores these lists in memory while the app is running:
+The extension stores these lists in memory while the app is running and provides JSON blocks for TinyDB persistence:
 
-- Playlists: `CreatePlaylist`, `DeletePlaylist`, `RenamePlaylist`, `AddSongToPlaylist`, `RemoveSongFromPlaylist`, `LoadPlaylist`, and `DisplayPlaylist`.
-- Favorites: `AddToFavorites`, `RemoveFromFavorites`, `LoadFavorites`, and `DisplayFavorites`.
-- Recently played: `AddRecentlyPlayed`, `LoadRecentlyPlayed`, and `ClearRecentlyPlayed`.
-- Queue: `AddToQueue`, `RemoveFromQueue`, `MoveQueueItem`, `LoadQueue`, and `ClearQueue`.
+- Playlists: `CreatePlaylist`, `DeletePlaylist`, `RenamePlaylist`, `AddSongToPlaylist`, `RemoveSongFromPlaylist`, `LoadPlaylist`, `SavePlaylistJson`, `UpdatePlaylistJson`, `ImportPlaylistsJson`, and `ExportPlaylistsJson`.
+- Favorites: `AddToFavorites`, `RemoveFromFavorites`, `LoadFavorites`, `ImportFavoritesJson`, `ExportFavoritesJson`, `SaveFavoritesJson`, `UpdateFavoritesJson`, and `DeleteFavorites`.
+- Recently played: `AddRecentlyPlayed`, `LoadRecentlyPlayed`, `ClearRecentlyPlayed`, `ImportRecentHistoryJson`, `ExportRecentHistoryJson`, `SaveRecentHistoryJson`, `UpdateRecentHistoryJson`, and `DeleteRecentHistory`.
+- Queue: `AddToQueue`, `RemoveFromQueue`, `MoveQueueItem`, `LoadQueue`, `ClearQueue`, `ImportQueueJson`, `ExportQueueJson`, `SaveQueueJson`, `UpdateQueueJson`, and `DeleteQueue`.
 
-Important: playlist, favorite, recently-played, and queue data is not persisted automatically. If you want the data to survive app restarts, save your own JSON or list data with TinyDB and reload it when the screen initializes.
+Use the TinyDB tag `playlist` for the value returned by `ExportPlaylistsJson`. On app startup, get that tag and pass it directly to `ImportPlaylistsJson`. Its shape is `{"Playlist name":[song, ...]}` and every song retains its path, title, artist, duration, album, and album-art path. The import and playlist CRUD blocks parse and update this structure, so the app does not need to manually unpack the JSON. The other export/import pairs work the same way with JSON song arrays. Persistence remains app-controlled: save exported JSON to TinyDB after mutations and import it during screen initialization.
 
 ### 8. Handle share and action icons
 
