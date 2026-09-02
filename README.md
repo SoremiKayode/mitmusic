@@ -306,6 +306,8 @@ The extension supports both its optional built-in Android MediaPlayer and an ext
 | --- | --- | --- | --- |
 | `PlayMusic()` / `ResumeMusic()` | None | Raises the `PlayClicked` event. This block does not start audio by itself. | In `PlayClicked`, call your actual audio player start/resume block and set your `isPlaying` variable to `true`. |
 | `PauseMusic()` | None | Raises the `PauseClicked` event. This block does not pause audio by itself. | In `PauseClicked`, call your actual audio player pause block and set `isPlaying` to `false` so the Clock stops advancing progress. |
+| `IsPlaying()` | None | Returns the state tracked by the combined play/pause control. | Use this when external playback logic needs to inspect the state currently shown by the interface. |
+| `SetPlaying(playing)` | `playing`: Boolean | Synchronizes the combined control without adding or replacing a button: `true` shows pause and `false` shows play. | Call after an external player starts, pauses, stops, completes, or fails. |
 | `StopMusic()` | None | Raises `ControlButtonClicked("Stop")`. | In `ControlButtonClicked`, if `name` is `Stop`, stop your player, set `isPlaying` to `false`, reset `currentPositionMs` to `0`, and call `SetCurrentPosition(0)`. |
 | `NextMusic()` / `PreviousMusic()` | None | Raises the `NextClicked` or `PreviousClicked` event and also advances the optional built-in MediaPlayer when you are using internal playback. | With an external player, keep a `CurrentIndex` variable. For next, add 1 and wrap to 1 after `GetMusicCount`; for previous, subtract 1 and wrap to `GetMusicCount`. Then use `GetPath(CurrentIndex)` as the new player source. |
 | `PlayIndex(index)` / `PlaySongAtIndex(index)` | `index`: 1-based song index | Starts the optional built-in MediaPlayer for that library item, updates Now Playing metadata, resets progress, opens Now Playing, and adds the path to Recently Played. | Use this instead of `Player1.Source`/`Player1.Start` if your project needs this extension to own audio playback. |
@@ -418,6 +420,7 @@ The icon/image setter blocks such as `SetPlayIcon(path)`, `SetPauseIcon(path)`, 
 
 ## Recent player and playlist UI additions
 
+- Library and collection views are kept separate, so returning to Library reuses its existing rows and scroll position instead of rebuilding a large song list. The Now Playing controls share available width, album art adapts to narrow displays, and one larger stateful button switches between play and pause.
 - Search results use a 280dp fixed-height elevated overlay and remain independently scrollable. Missing artist metadata (including `Unknown Artist` and `<unknown>`) is hidden instead of shown.
 - Song titles are limited to three lines and animate when truncated. Control buttons use raised surface backgrounds, and custom icon loaders support App Inventor assets through `MediaUtil`.
 - `ShowPlaylistPopup(path)` opens the playlist picker directly. The picker is also opened by each song's playlist icon. Playlist drawer actions open create, rename, and delete dialogs and raise `PlaylistActionClicked(action)`.
