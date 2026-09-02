@@ -6,7 +6,7 @@ The extension includes in-memory playlist, favorites, queue, and recently-played
 
 ## Included UI
 
-- Music Library screen with top app bar, search bar, scrollable song list, floating update button, navigation drawer, playlist drawer, bottom navigation, dropdown search results, and empty state.
+- Music Library screen with top app bar, search bar, scrollable song list, floating update button, navigation drawer, playlist drawer, bottom navigation, and a fixed-height, scrollable search dropdown that overlays library content.
 - Now Playing screen with album art, song title, artist, seek bar, time labels, playback controls, favorite, share, playlist/queue, and back-style controls.
 - Dark and light theme blocks plus color customization blocks.
 
@@ -300,7 +300,7 @@ All index-based getter blocks use a 1-based `index` number, matching App Invento
 
 ### Playback and Now Playing blocks
 
-The extension does not play audio directly. These blocks update the UI or raise events so your App Inventor Player, TaifunPlayer, or other audio component can do the actual playback.
+The extension supports both its optional built-in Android MediaPlayer and an external App Inventor player. Control events remain available when an external player owns playback.
 
 | Block | Parameters | What it does | How to use it |
 | --- | --- | --- | --- |
@@ -405,8 +405,8 @@ The icon/image setter blocks such as `SetPlayIcon(path)`, `SetPauseIcon(path)`, 
 | `SearchCompleted(resultList)` | JSON text | Fires after `SearchMusic`. |
 | `SearchItemClicked(musicPath, songName)` | path text, title text | Fires when a dropdown result is tapped. |
 | `ShareIconClicked(path)`, `ShareClicked(path)` | path text | Fires from row or control share actions; run your sharing blocks here. |
-| `PlaylistIconClicked(path)` / `FavoriteClicked(path)` | path text | Fires from row action icons. |
-| `PlaylistOpened`, `PlaylistClosed`, `DrawerOpened`, `DrawerClosed` | None | Fires when drawers are opened or closed. |
+| `PlaylistIconClicked(path)` / `FavoriteClicked(path)` | path text | Fires from row action icons. The playlist icon also opens the playlist chooser; selecting a playlist adds the song. |
+| `PlaylistOpened`, `PlaylistClosed`, `DrawerOpened`, `DrawerClosed` | None | Fires when drawers are opened or closed. Tapping the dimmed area outside a drawer closes it. |
 | `SidebarItemClicked(item)` | text | Fires when a drawer/menu item is tapped. |
 | `PlaylistCreated(name)`, `PlaylistDeleted(name)`, `PlaylistRenamed(oldName, newName)`, `PlaylistSelected(name)` | playlist names | Fires after playlist operations. |
 | `SongAdded(playlist, path)`, `SongRemoved(playlist, path)` | playlist text, path text | Fires after changing playlist contents. |
@@ -414,3 +414,11 @@ The icon/image setter blocks such as `SetPlayIcon(path)`, `SetPauseIcon(path)`, 
 | `QueueUpdated()` | None | Fires after queue changes. |
 | `ScreenChanged(screen)` | text | Fires after screen navigation. |
 | `FABClicked()` | None | Fires when the floating update button is tapped, before it scans music. |
+
+
+## Recent player and playlist UI additions
+
+- Search results use a 280dp fixed-height elevated overlay and remain independently scrollable. Missing artist metadata (including `Unknown Artist` and `<unknown>`) is hidden instead of shown.
+- Song titles are limited to three lines and animate when truncated. Control buttons use raised surface backgrounds, and custom icon loaders support App Inventor assets through `MediaUtil`.
+- `ShowPlaylistPopup(path)` opens the playlist picker directly. The picker is also opened by each song's playlist icon. Playlist drawer actions open create, rename, and delete dialogs and raise `PlaylistActionClicked(action)`.
+- `PlayerCompleted` complements `PlaybackCompleted` for timer-reset logic. `NotifyOtherPlayerStarted`, `NotifyOtherPlayerEnd`, and `NotifyPlayerError` bridge external players to the `OtherPlayerStarted`, `OtherPlayerEnd`, and `PlayerError` events. `SetVolume(volume)` and `Volume()` control/read built-in-player volume from 0 through 100.
