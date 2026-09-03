@@ -171,7 +171,7 @@ Search is built into the UI and can also be controlled from blocks:
 - `UpdateDropdown(json)`: displays search results in the dropdown.
 - `DisplaySearchResult(json)`: updates and shows the dropdown.
 - `HideSearchResult` and `ClearSearchResult`: hide or clear dropdown results.
-- `SearchItemClicked(musicPath, songName)`: fires when a dropdown result is tapped.
+- `SearchItemClicked(musicIndex, musicPath, songName)`: fires when a dropdown result is tapped. `musicIndex` is the 1-based position in the current music list, or `0` for an externally supplied dropdown item that is not in that list.
 
 ### 7. Manage playlists, favorites, recently played, and queue
 
@@ -364,6 +364,7 @@ These blocks keep data in memory only. Save important lists in TinyDB if you nee
 | `ShareMusic(path)` | `path`: text | Stores the path as the current share target and raises `ShareClicked`. | Handle `ShareClicked` with Sharing or Activity Starter blocks. |
 | `ShareToWhatsApp(path)`, `ShareToFacebook(path)`, `ShareToInstagram(path)`, `ShareToTelegram(path)`, `ShareToMessenger(path)`, `ShareToSystem(path)` | `path`: text | Convenience share blocks that raise `ShareClicked(path)`. | Use the event to implement platform-specific sharing in your app. |
 | `SetFABColor(color)` | `color`: App Inventor color number | Changes the floating update button color. | Use with App Inventor color blocks. |
+| `ShowPlayButton(show)`, `ShowPreviousButton(show)`, `ShowNextButton(show)`, `ShowShuffleButton(show)`, `ShowRepeatButton(show)`, `ShowFavoriteButton(show)`, `ShowShareButton(show)`, `ShowQueueButton(show)` | `show`: boolean | Shows the selected Now Playing control when true and hides it when false. `ShowPlayButton` controls the combined play/pause button, while `ShowShareButton` controls both share icons. | Use these blocks to tailor the control row to the playback and actions your app supports. |
 | `ShowEmptyState()` / `HideEmptyState()` | None | Shows or hides the no-songs message. | Use while loading or after clearing the list. |
 | `SetEmptyStateText(text)` | `text`: text | Changes the no-songs message. | Example: `No music found in Downloads`. |
 
@@ -405,7 +406,7 @@ The icon/image setter blocks such as `SetPlayIcon(path)`, `SetPauseIcon(path)`, 
 | `ControlButtonClicked(name)` | text | Fires for any control icon; useful for one generic handler. |
 | `SearchTextChanged(searchText)` | text | Fires as the built-in search field changes and automatically runs search. |
 | `SearchCompleted(resultList)` | JSON text | Fires after `SearchMusic`. |
-| `SearchItemClicked(musicPath, songName)` | path text, title text | Fires when a dropdown result is tapped. |
+| `SearchItemClicked(musicIndex, musicPath, songName)` | 1-based index number, path text, title text | Fires when a dropdown result is tapped. The index is `0` if a custom dropdown result is not present in the current music list. |
 | `ShareIconClicked(path)`, `ShareClicked(path)` | path text | Fires from row or control share actions; run your sharing blocks here. |
 | `PlaylistIconClicked(path)` / `FavoriteClicked(path)` | path text | Fires from row action icons. The playlist icon also opens the playlist chooser; selecting a playlist adds the song. |
 | `PlaylistOpened`, `PlaylistClosed`, `DrawerOpened`, `DrawerClosed` | None | Fires when drawers are opened or closed. Tapping the dimmed area outside a drawer closes it. |
