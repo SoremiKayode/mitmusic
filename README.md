@@ -182,6 +182,8 @@ The extension stores these lists in memory while the app is running and provides
 - Recently played: `AddRecentlyPlayed`, `LoadRecentlyPlayed`, `ClearRecentlyPlayed`, `ImportRecentHistoryJson`, `ExportRecentHistoryJson`, `SaveRecentHistoryJson`, `UpdateRecentHistoryJson`, and `DeleteRecentHistory`.
 - Queue: `AddToQueue`, `RemoveFromQueue`, `MoveQueueItem`, `LoadQueue`, `ClearQueue`, `ImportQueueJson`, `ExportQueueJson`, `SaveQueueJson`, `UpdateQueueJson`, and `DeleteQueue`.
 
+Every song row can be swiped left to reveal a permanent-delete button. Tapping it fires `SongDeleteClicked(path)` without deleting immediately, allowing the app to show a confirmation dialog. After confirmation, pass that path to `DeleteFromMemory(path)`. The function deletes through MediaStore (or deletes a direct file path), removes the song from all in-memory collections, and returns whether deletion succeeded. `SongDeleted(path)` reports success; `SongDeleteFailed(path, message)` reports missing permission, Android approval requirements, or another failure. On recent Android versions, deleting media that the app does not own may require system-provided user approval.
+
 Use the TinyDB tag `playlist` for the value returned by `ExportPlaylistsJson`. On app startup, get that tag and pass it directly to `ImportPlaylistsJson`. Its shape is `{"Playlist name":[song, ...]}` and every song retains its path, title, artist, duration, album, and album-art path. The import and playlist CRUD blocks parse and update this structure, so the app does not need to manually unpack the JSON. The other export/import pairs work the same way with JSON song arrays. Persistence remains app-controlled: save exported JSON to TinyDB after mutations and import it during screen initialization.
 
 ### 8. Handle share and action icons
@@ -192,6 +194,7 @@ The extension emits events for sharing and action buttons, but your app should p
 - `ShareClicked(path)` fires from share controls and share helper functions.
 - `PlaylistIconClicked(path)` fires when the user taps the add-to-playlist icon.
 - `FavoriteClicked(path)` fires when the user taps the favorite icon.
+- `QueueClicked(path)` fires with the selected song path, ready to pass to `AddToQueue`.
 
 Use these events to call MIT App Inventor sharing blocks, Activity Starter, or your own custom sharing logic.
 
