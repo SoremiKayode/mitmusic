@@ -1,11 +1,15 @@
 package chatinputbox.chatinputboxnew;
 
 import android.Manifest;
+import android.app.Activity;
 import android.animation.ObjectAnimator;
 import android.app.AlertDialog;
+import android.app.PendingIntent;
+import android.app.RecoverableSecurityException;
 import android.media.MediaPlayer;
 import android.content.ContentUris;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Color;
@@ -40,6 +44,7 @@ import com.google.appinventor.components.annotations.SimpleEvent;
 import com.google.appinventor.components.annotations.SimpleFunction;
 import com.google.appinventor.components.annotations.SimpleProperty;
 import com.google.appinventor.components.runtime.AndroidViewComponent;
+import com.google.appinventor.components.runtime.ActivityResultListener;
 import com.google.appinventor.components.runtime.ComponentContainer;
 import com.google.appinventor.components.runtime.EventDispatcher;
 import com.google.appinventor.components.runtime.PermissionResultHandler;
@@ -49,12 +54,13 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Random;
 
-public class CodeIgniteMITMusic extends AndroidViewComponent {
+public class CodeIgniteMITMusic extends AndroidViewComponent implements ActivityResultListener {
     private final ComponentContainer container;
     private final FrameLayout root;
     private final LinearLayout shell;
@@ -118,6 +124,9 @@ public class CodeIgniteMITMusic extends AndroidViewComponent {
     private boolean internalShuffle = false;
     private boolean internalRepeat = false;
     private boolean isPlaying = false;
+    private int deleteApprovalRequestCode = 0;
+    private String pendingDeletePath = "";
+    private boolean retryDeleteAfterApproval = false;
     private float playerVolume = 1f;
     private String pendingPlaylistPath = "";
     private final Random random = new Random();
@@ -364,10 +373,49 @@ public class CodeIgniteMITMusic extends AndroidViewComponent {
                 deleted=file.exists()&&file.delete();
                 if(deleted)container.$context().getContentResolver().delete(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,MediaStore.Audio.Media.DATA+"=?",new String[]{file.getAbsolutePath()});
             }
-        }catch(SecurityException e){ SongDeleteFailed(value,"Android requires permission or user approval to delete this song"); return false; }
+        }catch(SecurityException e){
+            if(requestDeleteApproval(value,e))return false;
+            SongDeleteFailed(value,"Android denied access and did not provide a deletion approval dialog"); return false;
+        }
         catch(Exception e){ SongDeleteFailed(value,e.getMessage()==null?"Unable to delete song":e.getMessage()); return false; }
         if(!deleted){ SongDeleteFailed(value,"Song was not deleted; it may no longer exist or Android denied access"); return false; }
         removeSongFromMemory(value); SongDeleted(value); return true;
+    }
+
+    private boolean requestDeleteApproval(String path,SecurityException error){
+        if(!path.startsWith("content://")||Build.VERSION.SDK_INT<29)return false;
+        try{
+            PendingIntent approval;
+            boolean retryAfterApproval;
+            if(Build.VERSION.SDK_INT>=30){
+                approval=MediaStore.createDeleteRequest(container.$context().getContentResolver(),Collections.singletonList(Uri.parse(path)));
+                retryAfterApproval=false;
+            }else if(error instanceof RecoverableSecurityException){
+                approval=((RecoverableSecurityException)error).getUserAction().getActionIntent();
+                retryAfterApproval=true;
+            }else return false;
+            if(deleteApprovalRequestCode==0)deleteApprovalRequestCode=container.$form().registerForActivityResult(this);
+            pendingDeletePath=path;
+            retryDeleteAfterApproval=retryAfterApproval;
+            container.$form().startIntentSenderForResult(approval.getIntentSender(),deleteApprovalRequestCode,null,0,0,0);
+            SongDeleteApprovalRequested(path);
+            return true;
+        }catch(Exception approvalError){
+            pendingDeletePath="";
+            retryDeleteAfterApproval=false;
+            return false;
+        }
+    }
+
+    @Override public void resultReturned(int requestCode,int resultCode,Intent data){
+        if(requestCode!=deleteApprovalRequestCode||pendingDeletePath.length()==0)return;
+        String path=pendingDeletePath;
+        boolean retry=retryDeleteAfterApproval;
+        pendingDeletePath="";
+        retryDeleteAfterApproval=false;
+        if(resultCode!=Activity.RESULT_OK){ SongDeleteFailed(path,"Deletion was cancelled by the user"); return; }
+        if(retry)DeleteFromMemory(path);
+        else{ removeSongFromMemory(path); SongDeleted(path); }
     }
     @SimpleFunction(description="Scans the phone MediaStore for every music/audio file the app has permission to read, then displays the results.") public void LoadAllMusic(){ loadMusicFromMediaStore(null); }
     @SimpleFunction(description="Scans and displays MediaStore songs matching a folder. Required parameter: folder (text): the full folder path or folder name to match.") public void LoadMusicFromFolder(String folder){ loadMusicFromMediaStore(folder); }
@@ -506,6 +554,7 @@ public class CodeIgniteMITMusic extends AndroidViewComponent {
     @SimpleEvent(description="Triggered when search text changed occurs. Provides: searchText (text): Current search-field text.") public void SearchTextChanged(String searchText){ if(dispatchEventOnce("SearchTextChanged",searchText)) SearchMusic(searchText); } @SimpleEvent(description="Triggered when search completed occurs. Provides: resultList (text): JSON array text containing matching songs.") public void SearchCompleted(String resultList){ dispatchEventOnce("SearchCompleted",resultList); } @SimpleEvent(description="Triggered when a search result is clicked. Provides: musicIndex (number): 1-based index in the music list, or 0 when the result is not in the list; musicPath (text): selected song content URI or file path; songName (text): selected song title.") public void SearchItemClicked(int musicIndex,String musicPath,String songName){ dispatchEventOnce("SearchItemClicked",musicIndex,musicPath,songName); }
     @SimpleEvent(description="Triggered when music clicked occurs. Provides: musicIndex (number): 1-based selected song index; musicPath (text): Selected song content URI or file path; songName (text): Selected song title; artist (text): Artist name text; duration (text): Formatted song duration text, usually m:ss; album (text): Album name.") public void MusicClicked(int musicIndex,String musicPath,String songName,String artist,String duration,String album){ sharePath=musicPath; if(nowPlayingNav!=null)nowPlayingNav.setVisibility(View.VISIBLE); refreshStatefulControls(); dispatchEventOnce("MusicClicked",musicIndex,musicPath,songName,artist,duration,album); dispatchEventOnce("MusicSelected",musicIndex,musicPath); } @SimpleEvent(description="Triggered when music long pressed occurs. Provides: index (number): 1-based song index; path (text): Song content URI, file path, or packaged asset path as appropriate.") public void MusicLongPressed(int index,String path){ dispatchEventOnce("MusicLongPressed",index,path); } @SimpleEvent(description="Triggered when share icon clicked occurs. Provides: path (text): Song content URI, file path, or packaged asset path as appropriate.") public void ShareIconClicked(String path){ dispatchEventOnce("ShareIconClicked",path); } @SimpleEvent(description="Triggered when playlist icon clicked occurs. Provides: path (text): Song content URI, file path, or packaged asset path as appropriate.") public void PlaylistIconClicked(String path){ dispatchEventOnce("PlaylistIconClicked",path); } @SimpleEvent(description="Triggered when favorite clicked occurs. Provides: path (text): Song content URI, file path, or packaged asset path as appropriate.") public void FavoriteClicked(String path){ dispatchEventOnce("FavoriteClicked",path); }
     @SimpleEvent(description="Triggered when the swipe delete button is clicked. Provides: path (text): Pass this value to DeleteFromMemory after asking the user to confirm permanent deletion.") public void SongDeleteClicked(String path){ dispatchEventOnce("SongDeleteClicked",path); }
+    @SimpleEvent(description="Triggered when Android displays its required system approval dialog for deleting a song. DeleteFromMemory completes asynchronously after the user responds. Provides: path (text): Song awaiting approval.") public void SongDeleteApprovalRequested(String path){ dispatchEventOnce("SongDeleteApprovalRequested",path); }
     @SimpleEvent(description="Triggered after DeleteFromMemory permanently deletes a song. Provides: path (text): Deleted song content URI or file path.") public void SongDeleted(String path){ dispatchEventOnce("SongDeleted",path); }
     @SimpleEvent(description="Triggered when DeleteFromMemory cannot delete a song. Provides: path (text): Requested song path; message (text): failure reason.") public void SongDeleteFailed(String path,String message){ dispatchEventOnce("SongDeleteFailed",path,message); }
     @SimpleEvent(description="Triggered when playlist opened occurs.") public void PlaylistOpened(){ EventDispatcher.dispatchEvent(this,"PlaylistOpened"); } @SimpleEvent(description="Triggered when playlist closed occurs.") public void PlaylistClosed(){ EventDispatcher.dispatchEvent(this,"PlaylistClosed"); } @SimpleEvent(description="Triggered when drawer opened occurs.") public void DrawerOpened(){ EventDispatcher.dispatchEvent(this,"DrawerOpened"); } @SimpleEvent(description="Triggered when drawer closed occurs.") public void DrawerClosed(){ EventDispatcher.dispatchEvent(this,"DrawerClosed"); } @SimpleEvent(description="Triggered when sidebar item clicked occurs. Provides: item (text): Selected sidebar item name.") public void SidebarItemClicked(String item){ EventDispatcher.dispatchEvent(this,"SidebarItemClicked",item); }
