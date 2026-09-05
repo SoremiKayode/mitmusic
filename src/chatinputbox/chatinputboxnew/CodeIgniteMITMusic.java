@@ -58,7 +58,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Random;
+import java.util.WeakHashMap;
 
 public class CodeIgniteMITMusic extends AndroidViewComponent implements ActivityResultListener {
     private final ComponentContainer container;
@@ -136,6 +138,7 @@ public class CodeIgniteMITMusic extends AndroidViewComponent implements Activity
     private final HashMap<String, ArrayList<TextView>> controlButtons = new HashMap<String, ArrayList<TextView>>();
     private final HashSet<String> dispatchingEvents = new HashSet<String>();
     private final HashMap<TextView, ObjectAnimator> titleAnimators = new HashMap<TextView, ObjectAnimator>();
+    private final WeakHashMap<TextView, String> favoriteButtons = new WeakHashMap<TextView, String>();
 
     public CodeIgniteMITMusic(ComponentContainer container) {
         super(container);
@@ -225,7 +228,7 @@ public class CodeIgniteMITMusic extends AndroidViewComponent implements Activity
     private LinearLayout buildCollectionScreen(){ LinearLayout page=new LinearLayout(container.$context()); page.setOrientation(LinearLayout.VERTICAL); page.setPadding(dp(14),dp(8),dp(14),dp(8)); collectionEmptyStateText=label("",16,false); collectionEmptyStateText.setGravity(Gravity.CENTER); ScrollView scroll=new ScrollView(container.$context()); collectionSongList=new LinearLayout(container.$context()); collectionSongList.setOrientation(LinearLayout.VERTICAL); scroll.addView(collectionSongList); page.addView(collectionEmptyStateText,new LinearLayout.LayoutParams(-1,dp(140))); page.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); return page; }
     private LinearLayout buildNowPlayingScreen(){ final LinearLayout p=new LinearLayout(container.$context()); p.setOrientation(LinearLayout.VERTICAL); p.setGravity(Gravity.CENTER_HORIZONTAL); p.setPadding(dp(16),dp(12),dp(16),dp(12)); albumArt=new ImageView(container.$context()); albumArt.setScaleType(ImageView.ScaleType.CENTER_CROP); albumArt.setBackground(round(cardColor,28)); albumArt.setImageDrawable(defaultAlbumArt()); nowTitle=titleLabel("Song Title",24); nowArtist=label("Artist",16,false); seekBar=new SeekBar(container.$context()); seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){ public void onProgressChanged(SeekBar b,int progress,boolean fromUser){ if(fromUser) SeekChanged(progress);} public void onStartTrackingTouch(SeekBar b){} public void onStopTrackingTouch(SeekBar b){} }); LinearLayout times=new LinearLayout(container.$context()); times.setGravity(Gravity.CENTER); currentTime=label("0:00",12,false); durationTime=label("0:00",12,false); times.addView(currentTime,new LinearLayout.LayoutParams(0,-2,1)); times.addView(durationTime); p.addView(albumArt,new LinearLayout.LayoutParams(dp(280),dp(280))); p.addView(nowTitle); p.addView(nowArtist); p.addView(seekBar,new LinearLayout.LayoutParams(-1,-2)); p.addView(times,new LinearLayout.LayoutParams(-1,-2)); p.addView(controlRow(new String[]{"↩","⇄","♡","◀","▶","▶▶","≡","↗"}),new LinearLayout.LayoutParams(-1,dp(66))); p.addOnLayoutChangeListener(new View.OnLayoutChangeListener(){ public void onLayoutChange(View v,int left,int top,int right,int bottom,int oldLeft,int oldTop,int oldRight,int oldBottom){ int availableWidth=right-left-dp(32); int availableHeight=bottom-top-dp(198); int size=Math.min(dp(280),Math.max(dp(80),Math.min(availableWidth,availableHeight))); ViewGroup.LayoutParams lp=albumArt.getLayoutParams(); if(lp.width!=size||lp.height!=size){ lp.width=size; lp.height=size; albumArt.setLayoutParams(lp); } }}); return p; }
     private LinearLayout controlRow(String[] names){ LinearLayout r=new LinearLayout(container.$context()); r.setGravity(Gravity.CENTER); for(final String n:names){ TextView button=icon(n,new View.OnClickListener(){ public void onClick(View v){ control(n); }}); boolean main=n.equals("▶"); if(main)playPauseButton=button; if(n.equals("♡"))nowFavoriteButton=button; if(n.equals("≡"))nowQueueButton=button; registerControlButton(controlKey(n),button); button.setMinWidth(0); button.setMinHeight(0); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,main?dp(64):dp(40),main?1.6f:1f); lp.setMargins(dp(2),0,dp(2),0); r.addView(button,lp); } return r; }
-    private void control(String n){ if(n.equals("▶")||n.equals("Ⅱ")){ boolean shouldPlay=!isPlaying; if(shouldPlay){ PlayClicked(); ResumeInternalPlayer(); n="▶"; } else { PauseClicked(); PauseInternalPlayer(); n="Ⅱ"; } setPlaying(shouldPlay); } else if(n.equals("▶▶")){ NextClicked(); PlayNextSong(); } else if(n.equals("◀")){ PreviousClicked(); PlayPreviousSong(); } else if(n.equals("⇄")){ internalShuffle=!internalShuffle; ShuffleClicked(); } else if(n.equals("↩")){ internalRepeat=!internalRepeat; RepeatClicked(); } else if(n.equals("♡")){ if(favorites.contains(sharePath))RemoveFromFavorites(sharePath); else AddToFavorites(sharePath); FavoriteClicked(sharePath); } else if(n.equals("≡")){ if(queue.contains(sharePath))RemoveFromQueue(sharePath); else AddToQueue(sharePath); QueueClicked(sharePath); } else if(n.equals("↗")||n.equals("⤴")) ShareClicked(sharePath); refreshStatefulControls(); ControlButtonClicked(n); }
+    private void control(String n){ if(n.equals("▶")||n.equals("Ⅱ")){ boolean shouldPlay=!isPlaying; if(shouldPlay){ PlayClicked(); ResumeInternalPlayer(); n="▶"; } else { PauseClicked(); PauseInternalPlayer(); n="Ⅱ"; } setPlaying(shouldPlay); } else if(n.equals("▶▶")){ NextClicked(); PlayNextSong(); } else if(n.equals("◀")){ PreviousClicked(); PlayPreviousSong(); } else if(n.equals("⇄")){ internalShuffle=!internalShuffle; ShuffleClicked(); } else if(n.equals("↩")){ internalRepeat=!internalRepeat; RepeatClicked(); } else if(n.equals("♡")){ toggleFavoriteFromUi(sharePath); } else if(n.equals("≡")){ if(queue.contains(sharePath))RemoveFromQueue(sharePath); else AddToQueue(sharePath); QueueClicked(sharePath); } else if(n.equals("↗")||n.equals("⤴")) ShareClicked(sharePath); refreshStatefulControls(); ControlButtonClicked(n); }
 
     private void renderSongs(ArrayList<Song> data){
         ArrayList<TextView> staleTitles=new ArrayList<TextView>(titleAnimators.keySet());
@@ -246,7 +249,7 @@ public class CodeIgniteMITMusic extends AndroidViewComponent implements Activity
         LinearLayout details=new LinearLayout(container.$context()); details.setOrientation(LinearLayout.VERTICAL); details.setClipChildren(true); details.setClipToPadding(true); details.setPadding(dp(4),0,dp(4),0);
         TextView title=titleLabel(song.title,15); details.addView(title,new LinearLayout.LayoutParams(-1,-2)); String secondary=joinMetadata(song.artist,song.duration); if(secondary.length()>0){ TextView meta=label(secondary,13,false); meta.setTextColor(hintColor); details.addView(meta); }
         LinearLayout.LayoutParams artLp=new LinearLayout.LayoutParams(dp(54),dp(54)); artLp.setMargins(0,0,dp(12),0); row.addView(art,artLp); row.addView(details,new LinearLayout.LayoutParams(0,-2,1));
-        TextView share=icon("↗",new View.OnClickListener(){ public void onClick(View v){ ShareIconClicked(song.path); }}); TextView playlist=icon("＋",new View.OnClickListener(){ public void onClick(View v){ pendingPlaylistPath=song.path; showPlaylistChooser(v); PlaylistIconClicked(song.path); }}); final boolean favorite=favorites.contains(song.path); TextView fav=icon("♡",new View.OnClickListener(){ public void onClick(View v){ if(favorites.contains(song.path))RemoveFromFavorites(song.path); else AddToFavorites(song.path); FavoriteClicked(song.path); }}); fav.setContentDescription(favorite?"Remove from favorites":"Add to favorites"); if(favorite)fav.setBackground(round(accentColor,22));
+        TextView share=icon("↗",new View.OnClickListener(){ public void onClick(View v){ ShareIconClicked(song.path); }}); TextView playlist=icon("＋",new View.OnClickListener(){ public void onClick(View v){ pendingPlaylistPath=song.path; showPlaylistChooser(v); PlaylistIconClicked(song.path); }}); final boolean favorite=favorites.contains(song.path); TextView fav=icon("♡",new View.OnClickListener(){ public void onClick(View v){ toggleFavoriteFromUi(song.path); }}); favoriteButtons.put(fav,song.path); styleFavoriteButton(fav,favorite);
         LinearLayout.LayoutParams actionLp=new LinearLayout.LayoutParams(dp(44),dp(44)); actionLp.setMargins(dp(3),0,dp(3),0); row.addView(share,actionLp); row.addView(playlist,actionLp); row.addView(fav,actionLp);
         row.setOnClickListener(new View.OnClickListener(){ public void onClick(View v){ MusicClicked(index,song.path,song.title,song.artist,song.duration,song.album); }}); row.setOnLongClickListener(new View.OnLongClickListener(){ public boolean onLongClick(View v){ MusicLongPressed(index,song.path); return true; }});
         delete.setOnClickListener(new View.OnClickListener(){ public void onClick(View v){ row.animate().translationX(0).setDuration(animationSpeed).withEndAction(new Runnable(){ public void run(){ if(removable)removeVisibleSong(song.path); else SongDeleteClicked(song.path); }}).start(); }});
@@ -448,13 +451,15 @@ public class CodeIgniteMITMusic extends AndroidViewComponent implements Activity
     public void PlayMusic(){ PlayClicked(); ResumeInternalPlayer(); setPlaying(true); }
 
     @SimpleFunction(description="Plays the next song in the current library. Shuffle mode is honored and the list wraps at the end.")
-    public void PlayNextSong(){
+    public void PlayNextSong(){ playNextSong(true); }
+
+    private void playNextSong(boolean openNowPlaying){
         int count=songs.size();
         if(count==0)return;
         int next=internalCurrentIndex<=0?1:internalCurrentIndex+1;
         if(internalShuffle&&count>1){ do{ next=random.nextInt(count)+1; }while(next==internalCurrentIndex); }
         if(next>count)next=1;
-        playSongAtIndex(next);
+        playSongAtIndex(next,openNowPlaying);
     }
 
     @SimpleFunction(description="Plays the previous song from the current library list and wraps to the last song from the start.")
@@ -507,8 +512,8 @@ public class CodeIgniteMITMusic extends AndroidViewComponent implements Activity
     @SimpleFunction(description="Reports an external or built-in player error. Required parameter: message (text): error detail.") public void NotifyPlayerError(String message){ PlayerError(message); }
 
     @SimpleFunction(description="Requests sharing for music. Required parameter: path (text): Song content URI, file path, or packaged asset path as appropriate.") public void ShareMusic(String path){ sharePath=path; ShareClicked(path); } @SimpleFunction(description="Requests sharing for to whats app. Required parameter: path (text): Song content URI, file path, or packaged asset path as appropriate.") public void ShareToWhatsApp(String path){ ShareClicked(path); } @SimpleFunction(description="Requests sharing for to facebook. Required parameter: path (text): Song content URI, file path, or packaged asset path as appropriate.") public void ShareToFacebook(String path){ ShareClicked(path); } @SimpleFunction(description="Requests sharing for to instagram. Required parameter: path (text): Song content URI, file path, or packaged asset path as appropriate.") public void ShareToInstagram(String path){ ShareClicked(path); } @SimpleFunction(description="Requests sharing for to telegram. Required parameter: path (text): Song content URI, file path, or packaged asset path as appropriate.") public void ShareToTelegram(String path){ ShareClicked(path); } @SimpleFunction(description="Requests sharing for to messenger. Required parameter: path (text): Song content URI, file path, or packaged asset path as appropriate.") public void ShareToMessenger(String path){ ShareClicked(path); } @SimpleFunction(description="Requests sharing for to system. Required parameter: path (text): Song content URI, file path, or packaged asset path as appropriate.") public void ShareToSystem(String path){ ShareClicked(path); }
-    @SimpleFunction(description="Adds a song to favorites.") public void AddToFavorites(String path){ if(path!=null&&path.length()>0)favorites.add(path); refreshFavoriteRows(); FavoriteAdded(path); }
-    @SimpleFunction(description="Removes a song from favorites.") public void RemoveFromFavorites(String path){ favorites.remove(path); refreshFavoriteRows(); FavoriteRemoved(path); }
+    @SimpleFunction(description="Adds a song to favorites.") public void AddToFavorites(String path){ if(path!=null&&path.length()>0)favorites.add(path); refreshFavoriteRows(); FavoriteAdded(path); refreshFavoriteCollection(); }
+    @SimpleFunction(description="Removes a song from favorites.") public void RemoveFromFavorites(String path){ favorites.remove(path); refreshFavoriteRows(); FavoriteRemoved(path); refreshFavoriteCollection(); }
     @SimpleFunction(description="Opens the favorites list screen.") public void LoadFavorites(){ openCollection("Favorites"); }
     @SimpleFunction(description="Displays favorites from a JSON song array.") public void DisplayFavorites(String json){ renderSongs(parseSongs(json)); }
     @SimpleFunction(description="Returns favorites as a JSON array with full song metadata.") public String ExportFavoritesJson(){ return songsArray(pathsToSongs(new ArrayList<String>(favorites))).toString(); }
@@ -591,7 +596,7 @@ public class CodeIgniteMITMusic extends AndroidViewComponent implements Activity
         mediaPlayer=new MediaPlayer();
         try{
             if(song.path.startsWith("content://"))mediaPlayer.setDataSource(container.$context(),Uri.parse(song.path)); else mediaPlayer.setDataSource(song.path);
-            mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener(){ public void onCompletion(MediaPlayer mp){ PlaybackCompleted(); PlayerCompleted(); if(internalRepeat)playSongAtIndex(internalCurrentIndex); else PlayNextSong(); }});
+            mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener(){ public void onCompletion(MediaPlayer mp){ PlaybackCompleted(); PlayerCompleted(); if(internalRepeat)playSongAtIndex(internalCurrentIndex,false); else playNextSong(false); }});
             mediaPlayer.prepare();
             mediaPlayer.setVolume(playerVolume,playerVolume);
             mediaPlayer.start();
@@ -604,10 +609,24 @@ public class CodeIgniteMITMusic extends AndroidViewComponent implements Activity
     private void StopInternalPlayer(){ if(mediaPlayer!=null){ try{ mediaPlayer.stop(); }catch(Exception e){} mediaPlayer.release(); mediaPlayer=null; } setPlaying(false); sharePath=""; if(nowPlayingScreen.getVisibility()==View.VISIBLE)OpenLibraryScreen(); }
     private void setPlaying(boolean playing){ isPlaying=playing; if(playing&&nowPlayingNav!=null)nowPlayingNav.setVisibility(View.VISIBLE); updatePlayPauseButton(); }
     private void updatePlayPauseButton(){ if(playPauseButton==null)return; String key=isPlaying?"pause":"play"; Drawable drawable=iconImagePaths.containsKey(key)?loadDrawable(iconImagePaths.get(key)):null; applyIconImageToView(key,playPauseButton,drawable); playPauseButton.setContentDescription(isPlaying?"Pause":"Play"); }
-    private void refreshFavoriteRows(){ renderLibrarySongs(); if(visibleCollection.equals("Favorites"))renderCollection("Favorites",pathsToSongs(new ArrayList<String>(favorites))); refreshStatefulControls(); }
+    private void refreshFavoriteRows(){ for(Map.Entry<TextView,String> entry:favoriteButtons.entrySet())styleFavoriteButton(entry.getKey(),favorites.contains(entry.getValue())); refreshStatefulControls(); }
+    private void refreshFavoriteCollection(){ if(visibleCollection.equals("Favorites"))renderCollection("Favorites",pathsToSongs(new ArrayList<String>(favorites))); }
+    private void styleFavoriteButton(TextView button,boolean favorite){ button.setContentDescription(favorite?"Remove from favorites":"Add to favorites"); button.setBackground(round(favorite?accentColor:cardColor,22)); }
+    private void toggleFavoriteFromUi(final String path){
+        if(path==null||path.length()==0)return;
+        final boolean added=!favorites.contains(path);
+        if(added)favorites.add(path); else favorites.remove(path);
+        refreshFavoriteRows();
+        root.postDelayed(new Runnable(){ public void run(){
+            if(added)FavoriteAdded(path); else FavoriteRemoved(path);
+            FavoriteClicked(path);
+            refreshFavoriteCollection();
+        }},16);
+    }
     private void refreshStatefulControls(){ styleStatefulControl(nowFavoriteButton,favorites.contains(sharePath),"Favorite","Remove from favorites"); styleStatefulControl(nowQueueButton,queue.contains(sharePath),"Queue","Remove from queue"); }
     private void styleStatefulControl(TextView view,boolean active,String inactiveDescription,String activeDescription){ if(view==null)return; view.setBackground(round(active?accentColor:(darkTheme?Color.rgb(48,48,48):Color.rgb(232,232,232)),22)); view.setElevation(dp(active?5:2)); view.setContentDescription(active?activeDescription:inactiveDescription); }
-    private void playSongAtIndex(int index){ if(index<1||index>songs.size())return; Song song=songs.get(index-1); internalCurrentIndex=index; sharePath=song.path; if(nowPlayingNav!=null)nowPlayingNav.setVisibility(View.VISIBLE); startInternalPlayer(song); updateNowPlaying(song,0); OpenNowPlayingScreen(); AddRecentlyPlayed(song.path); }
+    private void playSongAtIndex(int index){ playSongAtIndex(index,true); }
+    private void playSongAtIndex(int index,boolean openNowPlaying){ if(index<1||index>songs.size())return; Song song=songs.get(index-1); internalCurrentIndex=index; sharePath=song.path; if(nowPlayingNav!=null)nowPlayingNav.setVisibility(View.VISIBLE); startInternalPlayer(song); updateNowPlaying(song,0); if(openNowPlaying)OpenNowPlayingScreen(); AddRecentlyPlayed(song.path); }
     private void updateNowPlaying(Song song,int position){ SetSongTitle(song.title); SetArtist(song.artist); SetAlbumArt(song.albumArt); int duration=durationTextToMillis(song.duration); if(mediaPlayer!=null)duration=mediaPlayer.getDuration(); SetDuration(duration); SetCurrentPosition(position); SetCurrentTime(formatDuration(position)); SetDurationTime(formatDuration(duration)); }
     private int durationTextToMillis(String durationText){ if(durationText==null)return 0; String[] parts=durationText.split(":"); try{ if(parts.length==2)return ((Integer.parseInt(parts[0])*60)+Integer.parseInt(parts[1]))*1000; if(parts.length==3)return ((Integer.parseInt(parts[0])*3600)+(Integer.parseInt(parts[1])*60)+Integer.parseInt(parts[2]))*1000; }catch(Exception e){} return 0; }
 

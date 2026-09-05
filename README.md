@@ -316,7 +316,7 @@ The extension supports both its optional built-in Android MediaPlayer and an ext
 | `StopMusic()` | None | Raises `ControlButtonClicked("Stop")`. | In `ControlButtonClicked`, if `name` is `Stop`, stop your player, set `isPlaying` to `false`, reset `currentPositionMs` to `0`, and call `SetCurrentPosition(0)`. |
 | `NextMusic()` / `PreviousMusic()` | None | Raises the `NextClicked` or `PreviousClicked` event and also advances the optional built-in MediaPlayer when you are using internal playback. | With an external player, keep a `CurrentIndex` variable. For next, add 1 and wrap to 1 after `GetMusicCount`; for previous, subtract 1 and wrap to `GetMusicCount`. Then use `GetPath(CurrentIndex)` as the new player source. |
 | `PlayIndex(index)` / `PlaySongAtIndex(index)` | `index`: 1-based song index | Starts the optional built-in MediaPlayer for that library item, updates Now Playing metadata, resets progress, opens Now Playing, and adds the path to Recently Played. | Use this instead of `Player1.Source`/`Player1.Start` if your project needs this extension to own audio playback. |
-| `PlayNextSong()` / `playNextSong()` | None | Selects and plays the next song with the optional built-in MediaPlayer, wrapping to the first song. The lowercase alias exists so App Inventor users can create/call a block named exactly `playNextSong`. | Connect `NextClicked` and player completion logic to this block when you want extension-managed next-track behavior. |
+| `PlayNextSong()` / `playNextSong()` | None | Selects and plays the next song with the optional built-in MediaPlayer, wrapping to the first song. The lowercase alias exists so App Inventor users can create/call a block named exactly `playNextSong`. Automatic advancement after completion updates the player without changing the screen. | Connect `NextClicked` to this block when you want extension-managed next-track behavior. Completion is already handled by the built-in player. |
 | `PlayPreviousSong()` | None | Selects and plays the previous song with the optional built-in MediaPlayer, wrapping to the last song. | Connect `PreviousClicked` to this block when using extension-managed playback. |
 | `ShuffleMusic()` / `RepeatMusic()` | None | Toggles internal shuffle/repeat for the optional built-in MediaPlayer and raises the corresponding events. | With an external player, toggle your own Boolean variables, such as `shuffleEnabled` and `repeatEnabled`, and use them in `Player.Completed`, `NextClicked`, and `PreviousClicked`. |
 | `SetSongTitle(title)` | `title`: text. Use the `songName` value from `MusicClicked` or `GetTitle(index)`. | Updates only the Now Playing song title label. It does not change the song file being played. | Call immediately after setting your player source so the Now Playing screen matches the audio. |
@@ -361,6 +361,8 @@ These blocks keep data in memory only. Save important lists in TinyDB if you nee
 | `MoveQueueItem(from, to)` | `from`: number, `to`: number | Moves a queue item using 1-based positions. |
 | `LoadQueue()` | None | Displays queued songs. |
 | `ClearQueue()` | None | Clears the queue. |
+
+Favorite button taps update the heart controls immediately. The `FavoriteAdded`, `FavoriteRemoved`, and `FavoriteClicked` callbacks are then raised on the next UI frame, so TinyDB/JSON persistence performed in those event handlers cannot delay the visual response to the tap. The extension does not write favorites to a database itself.
 
 ### Sharing and action icon blocks
 
