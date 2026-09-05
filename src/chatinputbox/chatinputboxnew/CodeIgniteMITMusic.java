@@ -39,7 +39,6 @@ import com.google.appinventor.components.annotations.DesignerProperty;
 import com.google.appinventor.components.annotations.SimpleEvent;
 import com.google.appinventor.components.annotations.SimpleFunction;
 import com.google.appinventor.components.annotations.SimpleProperty;
-import com.google.appinventor.components.annotations.UsesPermissions;
 import com.google.appinventor.components.runtime.AndroidViewComponent;
 import com.google.appinventor.components.runtime.ComponentContainer;
 import com.google.appinventor.components.runtime.EventDispatcher;
@@ -55,7 +54,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Random;
 
-@UsesPermissions(permissionNames = "android.permission.READ_EXTERNAL_STORAGE,android.permission.READ_MEDIA_AUDIO")
 public class CodeIgniteMITMusic extends AndroidViewComponent {
     private final ComponentContainer container;
     private final FrameLayout root;
