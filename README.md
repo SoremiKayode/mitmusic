@@ -52,6 +52,7 @@ Permission behavior:
 
 - Android 13 and newer use `android.permission.READ_MEDIA_AUDIO`.
 - Older Android versions use `android.permission.READ_EXTERNAL_STORAGE`.
+- Both permissions are declared by the extension itself, so `RequestStoragePermission` works after the extension is imported without requiring a separate Screen permission declaration.
 - You can call `CheckPermission` to test whether permission is already granted. Pass an empty string to check the permission required for the current Android version.
 
 ### 3. Load music into the library
@@ -182,7 +183,7 @@ The extension stores these lists in memory while the app is running and provides
 - Recently played: `AddRecentlyPlayed`, `LoadRecentlyPlayed`, `ClearRecentlyPlayed`, `ImportRecentHistoryJson`, `ExportRecentHistoryJson`, `SaveRecentHistoryJson`, `UpdateRecentHistoryJson`, and `DeleteRecentHistory`.
 - Queue: `AddToQueue`, `RemoveFromQueue`, `MoveQueueItem`, `LoadQueue`, `ClearQueue`, `ImportQueueJson`, `ExportQueueJson`, `SaveQueueJson`, `UpdateQueueJson`, and `DeleteQueue`.
 
-Every song row can be swiped left to reveal a permanent-delete button. Tapping it fires `SongDeleteClicked(path)` without deleting immediately, allowing the app to show a confirmation dialog. After confirmation, pass that path to `DeleteFromMemory(path)`. The function deletes through MediaStore (or deletes a direct file path), removes the song from all in-memory collections, and returns whether deletion succeeded. `SongDeleted(path)` reports success; `SongDeleteFailed(path, message)` reports missing permission, Android approval requirements, or another failure. On recent Android versions, deleting media that the app does not own may require system-provided user approval.
+Every song row has share, add-to-playlist, and favorite buttons; queue management remains available on the Now Playing screen and through the queue blocks. Swipe a row left to reveal a permanent-delete button, or right to close it. Tapping delete fires `SongDeleteClicked(path)` without deleting immediately, allowing the app to show a confirmation dialog. After confirmation, pass that path to `DeleteFromMemory(path)`. The function deletes through MediaStore (or deletes a direct file path), removes the song from all in-memory collections, and returns whether deletion succeeded. `SongDeleted(path)` reports success; `SongDeleteFailed(path, message)` reports missing permission, Android approval requirements, or another failure. On recent Android versions, deleting media that the app does not own may require system-provided user approval.
 
 Use the TinyDB tag `playlist` for the value returned by `ExportPlaylistsJson`. On app startup, get that tag and pass it directly to `ImportPlaylistsJson`. Its shape is `{"Playlist name":[song, ...]}` and every song retains its path, title, artist, duration, album, and album-art path. The import and playlist CRUD blocks parse and update this structure, so the app does not need to manually unpack the JSON. The other export/import pairs work the same way with JSON song arrays. Persistence remains app-controlled: save exported JSON to TinyDB after mutations and import it during screen initialization.
 
